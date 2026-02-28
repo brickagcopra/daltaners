@@ -1,0 +1,26 @@
+{
+  "name": "@daltaners/ui",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rimraf dist",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.0",
+    "tailwind-merge": "^2.2.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "rimraf": "^5.0.0",
+    "tailwindcss": "^3.4.0",
+    "@types/react": "^18.2.0"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  }
+}

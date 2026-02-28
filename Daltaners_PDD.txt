@@ -1,0 +1,2919 @@
+================================================================================
+DALTANERS - PRODUCT DESIGN DOCUMENT (PDD)
+Technical Architecture & Design Specification
+Version 2.0 | February 2026
+================================================================================
+
+TABLE OF CONTENTS
+================================================================================
+1.  Document Overview
+2.  System Architecture Overview
+3.  Technology Stack Specification
+4.  Microservices Architecture
+    4.1   Service Decomposition
+    4.2   Service Communication Patterns
+    4.3   API Gateway Design
+    4.4   Service Mesh Architecture
+5.  Database Architecture
+    5.1   PostgreSQL Schema Design
+    5.2   CassandraDB Schema Design
+    5.3   Hybrid Database Strategy
+    5.4   Redis Caching Strategy
+    5.5   Elasticsearch Index Design
+6.  Backend Architecture (NestJS)
+    6.1   Module Structure
+    6.2   Authentication & Authorization
+    6.3   Event-Driven Architecture
+    6.4   CQRS Pattern Implementation
+    6.5   API Design Standards
+7.  Frontend Architecture
+    7.1   React Web Application Design
+    7.2   React Native Mobile Application Design
+    7.3   State Management (Zustand)
+    7.4   UI Component Library (Tailwind CSS + Shadcn)
+    7.5   Design System Specification
+8.  Containerization & Orchestration
+    8.1   Docker Configuration
+    8.2   Kubernetes Cluster Architecture
+    8.3   Helm Charts
+    8.4   CI/CD Pipeline Design
+9.  AI/ML Architecture
+    9.1   ML Pipeline Design
+    9.2   Model Serving Architecture
+    9.3   Feature Store Design
+10. Real-Time Systems
+    10.1  WebSocket Architecture
+    10.2  GPS Tracking System
+    10.3  Push Notification System
+11. Payment System Architecture
+12. Search Architecture
+13. Security Architecture
+14. Monitoring & Observability
+15. Disaster Recovery & Business Continuity
+16. Performance Engineering
+17. Data Pipeline Architecture
+18. DevOps & Infrastructure as Code
+19. Testing Strategy
+20. Deployment Strategy
+
+================================================================================
+1. DOCUMENT OVERVIEW
+================================================================================
+
+This Product Design Document provides the complete technical architecture 
+and design specification for the Daltaners platform. It details the system 
+architecture, database design, microservices decomposition, infrastructure 
+configuration, and implementation guidelines based on best practices from 
+Amazon Fresh and Carrefour Marketplace architectures.
+
+DESIGN PRINCIPLES:
+1. Microservices-First: Each business domain operates as an independent service
+2. Event-Driven: Asynchronous communication for loose coupling
+3. Cloud-Native: Designed for containerized deployment on Kubernetes
+4. API-First: All functionality exposed through well-defined APIs
+5. Polyglot Persistence: Right database for each use case
+6. Resilience: Fault-tolerant with graceful degradation
+7. Observability: Comprehensive monitoring, logging, and tracing
+8. Security-by-Design: Security embedded in every layer
+
+================================================================================
+2. SYSTEM ARCHITECTURE OVERVIEW
+================================================================================
+
+HIGH-LEVEL ARCHITECTURE DIAGRAM (Text Representation):
+
++------------------------------------------------------------------------+
+|                         CLIENT LAYER                                    |
+|  +-------------+ +-------------+ +-------------+ +------------------+  |
+|  | Customer    | | Vendor      | | Delivery    | | Admin Panel      |  |
+|  | Mobile App  | | Mobile App  | | Mobile App  | | (React Web)      |  |
+|  | (React      | | (React      | | (React      | |                  |  |
+|  |  Native)    | |  Native)    | |  Native)    | |                  |  |
+|  +------+------+ +------+------+ +------+------+ +--------+---------+  |
+|         |               |               |                  |           |
+|  +------+------+ +------+------+                           |           |
+|  | Customer    | | Vendor      |                           |           |
+|  | Web App     | | Dashboard   |                           |           |
+|  | (React)     | | (React)     |                           |           |
+|  +------+------+ +------+------+                           |           |
++--------+---------------+------+----------------------------+-----------+
+         |               |      |                            |
++--------v---------------v------v----------------------------v-----------+
+|                     CDN LAYER (CloudFlare)                              |
++--------+--------------------------------------------------------------+
+         |
++--------v--------------------------------------------------------------+
+|                     LOAD BALANCER (NGINX Ingress)                      |
++--------+--------------------------------------------------------------+
+         |
++--------v--------------------------------------------------------------+
+|                     API GATEWAY (Kong / Custom NestJS Gateway)         |
+|  +------------------------------------------------------------------+ |
+|  | Rate Limiting | Auth Middleware | Request Routing | API Versioning| |
+|  +------------------------------------------------------------------+ |
++--------+--------------------------------------------------------------+
+         |
++--------v--------------------------------------------------------------+
+|                     SERVICE MESH (Istio / Linkerd)                     |
++--------+--------------------------------------------------------------+
+         |
++--------v--------------------------------------------------------------+
+|                     MICROSERVICES LAYER (NestJS on K8s)                |
+|                                                                        |
+|  +--------------+ +--------------+ +--------------+ +--------------+  |
+|  | Auth         | | User         | | Product/     | | Order        |  |
+|  | Service      | | Service      | | Catalog Svc  | | Service      |  |
+|  +--------------+ +--------------+ +--------------+ +--------------+  |
+|  +--------------+ +--------------+ +--------------+ +--------------+  |
+|  | Vendor       | | Delivery     | | Payment      | | Notification |  |
+|  | Service      | | Service      | | Service      | | Service      |  |
+|  +--------------+ +--------------+ +--------------+ +--------------+  |
+|  +--------------+ +--------------+ +--------------+ +--------------+  |
+|  | Search       | | Inventory    | | Promotion    | | Analytics    |  |
+|  | Service      | | Service      | | Service      | | Service      |  |
+|  +--------------+ +--------------+ +--------------+ +--------------+  |
+|  +--------------+ +--------------+ +--------------+ +--------------+  |
+|  | Chat/Msg     | | Zone         | | POS          | | Car Rental   |  |
+|  | Service      | | Service      | | Service      | | Service      |  |
+|  +--------------+ +--------------+ +--------------+ +--------------+  |
+|  +--------------+ +--------------+ +--------------+ +--------------+  |
+|  | Review       | | Loyalty      | | WhatsApp     | | AI/ML        |  |
+|  | Service      | | Service      | | Service      | | Service      |  |
+|  +--------------+ +--------------+ +--------------+ +--------------+  |
+|  +--------------+ +--------------+                                    |
+|  | File/Media   | | Wallet       |                                    |
+|  | Service      | | Service      |                                    |
+|  +--------------+ +--------------+                                    |
++--------+--------------------------------------------------------------+
+         |
++--------v--------------------------------------------------------------+
+|                     MESSAGE BROKER LAYER                               |
+|  +------------------------------------------------------------------+ |
+|  |     Apache Kafka (Event Streaming)     |    RabbitMQ (Tasks)     | |
+|  +------------------------------------------------------------------+ |
++--------+--------------------------------------------------------------+
+         |
++--------v--------------------------------------------------------------+
+|                     DATA LAYER                                         |
+|  +--------------+ +--------------+ +--------------+ +--------------+  |
+|  | PostgreSQL   | | CassandraDB  | | Redis        | | Elasticsearch|  |
+|  | (Primary     | | (High-write  | | (Cache +     | | (Search +    |  |
+|  |  OLTP DB)    | |  workloads)  | |  Sessions)   | |  Analytics)  |  |
+|  +--------------+ +--------------+ +--------------+ +--------------+  |
+|  +--------------+ +--------------+                                    |
+|  | AWS S3 /     | | TimescaleDB  |                                    |
+|  | Cloudflare   | | (Time-series |                                    |
+|  | R2 (Files)   | |  metrics)    |                                    |
+|  +--------------+ +--------------+                                    |
++--------+--------------------------------------------------------------+
+         |
++--------v--------------------------------------------------------------+
+|                     INFRASTRUCTURE LAYER                               |
+|  +------------------------------------------------------------------+ |
+|  | Kubernetes Cluster (Multi-AZ) | Docker Containers                | |
+|  | Terraform (IaC)               | Helm Charts                     | |
+|  | ArgoCD (GitOps)               | Vault (Secrets)                 | |
+|  +------------------------------------------------------------------+ |
++-----------------------------------------------------------------------+
+
+================================================================================
+3. TECHNOLOGY STACK SPECIFICATION
+================================================================================
+
+3.1 BACKEND
+--------------------------------------
+Framework:          NestJS 10.x (TypeScript)
+Runtime:            Node.js 20 LTS
+Language:           TypeScript 5.x
+API Protocol:       REST (primary) + GraphQL (selective) + gRPC (inter-service)
+Message Broker:     Apache Kafka 3.x (event streaming)
+                    RabbitMQ 3.x (task queuing)
+WebSocket:          Socket.IO 4.x via NestJS Gateway
+Authentication:     JWT + OAuth2.0 (Passport.js)
+Validation:         class-validator + class-transformer
+ORM:                TypeORM 0.3.x (PostgreSQL) + custom Cassandra driver
+API Documentation:  Swagger/OpenAPI 3.0 via @nestjs/swagger
+Testing:            Jest + Supertest + Testcontainers
+
+3.2 DATABASES
+--------------------------------------
+Primary RDBMS:      PostgreSQL 16 (ACID transactions, relational data)
+NoSQL (Wide-Column): Apache Cassandra 4.x (high-throughput writes, analytics)
+Cache:              Redis 7.x (Stack with JSON/Search modules)
+Search Engine:      Elasticsearch 8.x
+Time-Series:        TimescaleDB (PostgreSQL extension)
+File Storage:       AWS S3 / Cloudflare R2
+CDN:                Cloudflare
+
+3.3 FRONTEND - WEB
+--------------------------------------
+Framework:          React 19
+Build Tool:         Vite 5.x
+State Management:   Zustand 4.x
+Styling:            Tailwind CSS 3.x
+UI Components:      shadcn/ui
+Routing:            React Router 6.x (or TanStack Router)
+Data Fetching:      TanStack Query (React Query) v5
+Form Management:    React Hook Form + Zod validation
+Charts:             Recharts / D3.js
+Maps:               Google Maps JavaScript API + @react-google-maps/api
+Internationalization: react-i18next
+Real-time:          Socket.IO Client
+
+3.4 FRONTEND - MOBILE
+--------------------------------------
+Framework:          React Native 0.74+ (New Architecture)
+Navigation:         React Navigation 6.x
+State Management:   Zustand 4.x (shared with web where possible)
+Styling:            NativeWind (Tailwind for React Native)
+Maps:               react-native-maps
+Push Notifications: react-native-firebase + @notifee/react-native
+Location:           react-native-geolocation-service
+Camera/Scanner:     react-native-camera / expo-camera
+Offline Storage:    WatermelonDB (for offline-first capabilities)
+Animations:         react-native-reanimated 3.x
+Gestures:           react-native-gesture-handler
+
+3.5 CONTAINERIZATION & ORCHESTRATION
+--------------------------------------
+Containers:         Docker 24.x
+Orchestration:      Kubernetes 1.29+ (managed: EKS/GKE/AKS)
+Package Manager:    Helm 3.x
+Service Mesh:       Istio 1.21+ (or Linkerd for lighter footprint)
+Ingress Controller: NGINX Ingress Controller
+Certificate Mgmt:  cert-manager (Let's Encrypt)
+Secrets Management: HashiCorp Vault
+GitOps:             ArgoCD 2.x
+Container Registry: AWS ECR / Docker Hub / GHCR
+
+3.6 CI/CD & DEVOPS
+--------------------------------------
+CI/CD Platform:     GitHub Actions (primary) + ArgoCD (deployment)
+Infrastructure:     Terraform 1.x
+Configuration Mgmt: Helm Values + Kustomize
+Artifact Storage:   AWS ECR / GitHub Container Registry
+Code Quality:       ESLint + Prettier + SonarQube
+Dependency Scan:    Snyk / Trivy
+SAST/DAST:          SonarQube + OWASP ZAP
+
+3.7 MONITORING & OBSERVABILITY
+--------------------------------------
+Metrics:            Prometheus + Grafana
+Logging:            ELK Stack (Elasticsearch, Logstash, Kibana)
+                    OR Grafana Loki + Promtail
+Tracing:            Jaeger / OpenTelemetry
+Error Tracking:     Sentry
+Uptime Monitoring:  UptimeRobot / Pingdom
+APM:                Datadog / New Relic (optional)
+Alerting:           PagerDuty / Opsgenie integration
+
+3.8 AI/ML
+--------------------------------------
+ML Framework:       TensorFlow 2.x / PyTorch 2.x
+Model Serving:      TensorFlow Serving / TorchServe / BentoML
+Feature Store:      Feast
+ML Pipeline:        Kubeflow / MLflow
+NLP:                spaCy / Hugging Face Transformers
+Data Processing:    Apache Spark / Pandas
+
+================================================================================
+4. MICROSERVICES ARCHITECTURE
+================================================================================
+
+4.1 SERVICE DECOMPOSITION
+--------------------------------------
+Following Domain-Driven Design (DDD), the platform is decomposed into bounded 
+contexts, each implemented as an independent microservice:
+
+SERVICE 1: AUTH SERVICE (daltaners-auth-service)
+  Domain: Authentication and Authorization
+  Responsibilities:
+    - User registration (customers, vendors, delivery, admin)
+    - Login/logout (email, phone, social OAuth)
+    - JWT token issuance and refresh
+    - OTP generation and verification
+    - Password reset flow
+    - Session management
+    - Role-based access control (RBAC)
+    - Two-factor authentication
+    - Device management
+  Database: PostgreSQL (users_auth schema)
+  Port: 3001
+
+SERVICE 2: USER SERVICE (daltaners-user-service)
+  Domain: User Profile Management
+  Responsibilities:
+    - Customer profile CRUD
+    - Address book management
+    - Preference management
+    - KYC document storage
+    - User segmentation tagging
+  Database: PostgreSQL (users schema)
+  Port: 3002
+
+SERVICE 3: VENDOR SERVICE (daltaners-vendor-service)
+  Domain: Vendor/Store Management
+  Responsibilities:
+    - Vendor registration and onboarding
+    - Store profile management
+    - Staff account management
+    - Operating hours management
+    - Vendor verification workflow
+    - Multi-branch management
+    - Vendor performance scoring
+    - Commission tier management
+  Database: PostgreSQL (vendors schema)
+  Port: 3003
+
+SERVICE 4: PRODUCT/CATALOG SERVICE (daltaners-catalog-service)
+  Domain: Product Catalog Management
+  Responsibilities:
+    - Product CRUD (per vendor)
+    - Category hierarchy management
+    - Product variants (size, weight, color)
+    - Product images management
+    - Product price management
+    - Bulk import/export
+    - SKU management
+    - Barcode mapping
+    - Product moderation/approval
+  Database: PostgreSQL (catalog schema) + Elasticsearch (product index)
+  Port: 3004
+
+SERVICE 5: INVENTORY SERVICE (daltaners-inventory-service)
+  Domain: Stock and Inventory Management
+  Responsibilities:
+    - Real-time stock level tracking
+    - Stock reservation (during checkout)
+    - Stock adjustment
+    - Low stock alerts
+    - Batch/expiry tracking
+    - Multi-location inventory
+    - AI demand forecasting integration
+    - Reorder point management
+  Database: PostgreSQL (inventory schema) + Redis (real-time stock cache)
+  Port: 3005
+
+SERVICE 6: ORDER SERVICE (daltaners-order-service)
+  Domain: Order Lifecycle Management
+  Responsibilities:
+    - Order creation and validation
+    - Order status management
+    - Order modification/cancellation
+    - Split order handling
+    - Recurring order management
+    - Order scheduling
+    - Order history
+    - Return/refund workflow
+    - Item substitution workflow
+  Database: PostgreSQL (orders schema) + CassandraDB (order_events)
+  Port: 3006
+
+SERVICE 7: DELIVERY SERVICE (daltaners-delivery-service)
+  Domain: Delivery Logistics and Fleet Management
+  Responsibilities:
+    - Delivery personnel management
+    - Order-to-rider assignment (optimization algorithm)
+    - Real-time GPS tracking
+    - Route optimization
+    - ETA calculation
+    - Delivery status updates
+    - Proof of delivery processing
+    - Multi-order batching
+    - Zone capacity management
+    - Delivery fee calculation
+  Database: PostgreSQL (delivery schema) + CassandraDB (gps_tracking) +
+            Redis (real-time location)
+  Port: 3007
+
+SERVICE 8: PAYMENT SERVICE (daltaners-payment-service)
+  Domain: Payment Processing and Financial Operations
+  Responsibilities:
+    - Payment intent creation
+    - Payment processing (Stripe, GCash, Maya)
+    - Refund processing
+    - COD management
+    - Wallet operations
+    - Vendor settlement
+    - Delivery payout
+    - Transaction reconciliation
+    - Tax calculation
+    - Invoice generation
+  Database: PostgreSQL (payments schema)
+  Port: 3008
+
+SERVICE 9: WALLET SERVICE (daltaners-wallet-service)
+  Domain: Digital Wallet Management
+  Responsibilities:
+    - Wallet creation and management
+    - Top-up processing
+    - Balance management
+    - Transfer between wallets
+    - Withdrawal processing
+    - Transaction history
+    - Wallet limits enforcement
+  Database: PostgreSQL (wallet schema)
+  Port: 3009
+
+SERVICE 10: NOTIFICATION SERVICE (daltaners-notification-service)
+  Domain: Multi-Channel Notifications
+  Responsibilities:
+    - Push notification dispatch (FCM/APNs)
+    - SMS dispatch (Twilio/Vonage)
+    - Email dispatch (SendGrid)
+    - In-app notification management
+    - Notification templates
+    - Notification preferences
+    - Broadcast notifications
+    - Scheduled notifications
+  Database: PostgreSQL (notifications schema) + CassandraDB 
+            (notification_log)
+  Port: 3010
+
+SERVICE 11: SEARCH SERVICE (daltaners-search-service)
+  Domain: Search and Discovery
+  Responsibilities:
+    - Product search indexing
+    - Full-text search with typo tolerance
+    - Faceted search
+    - Auto-complete / suggestions
+    - Trending/popular searches
+    - Personalized search ranking
+    - Store search
+    - Category search
+  Database: Elasticsearch (primary) + Redis (search cache)
+  Port: 3011
+
+SERVICE 12: PROMOTION SERVICE (daltaners-promotion-service)
+  Domain: Coupons, Discounts, and Marketing
+  Responsibilities:
+    - Coupon creation and management
+    - Coupon validation and redemption
+    - Flash sale management
+    - Banner management
+    - Campaign management
+    - Referral code management
+    - A/B testing for promotions
+    - Promotion analytics
+  Database: PostgreSQL (promotions schema) + Redis (coupon cache)
+  Port: 3012
+
+SERVICE 13: CHAT/MESSAGING SERVICE (daltaners-chat-service)
+  Domain: Real-Time Messaging
+  Responsibilities:
+    - Order-based chat (customer <-> vendor, customer <-> rider)
+    - Message storage and retrieval
+    - Image/file sharing in chat
+    - Read receipts
+    - VoIP call initiation
+    - Chat history
+    - Support ticket chat
+  Database: CassandraDB (messages) + Redis (presence/typing indicators)
+  Port: 3013
+
+SERVICE 14: ZONE SERVICE (daltaners-zone-service)
+  Domain: Geographic Zone Management
+  Responsibilities:
+    - Zone CRUD (polygon-based geofencing)
+    - Zone-delivery pricing rules
+    - Zone-vendor mapping
+    - Zone capacity management
+    - Surge zone detection
+    - Service area validation
+  Database: PostgreSQL with PostGIS (zones schema)
+  Port: 3014
+
+SERVICE 15: POS SERVICE (daltaners-pos-service)
+  Domain: Point of Sale Operations
+  Responsibilities:
+    - Transaction processing
+    - Receipt generation
+    - Cash management
+    - Inventory sync with online
+    - Shift management
+    - Hardware integration APIs
+    - Offline transaction queue
+  Database: PostgreSQL (pos schema) + SQLite (offline)
+  Port: 3015
+
+SERVICE 16: REVIEW SERVICE (daltaners-review-service)
+  Domain: Ratings and Reviews
+  Responsibilities:
+    - Review submission and storage
+    - Rating aggregation
+    - Review moderation (AI-assisted)
+    - Photo review handling
+    - Vendor response management
+    - Review analytics
+  Database: PostgreSQL (reviews schema) + CassandraDB (review_analytics)
+  Port: 3016
+
+SERVICE 17: LOYALTY SERVICE (daltaners-loyalty-service)
+  Domain: Loyalty and Rewards Program
+  Responsibilities:
+    - Points earning and tracking
+    - Tier management
+    - Points redemption
+    - Badge/achievement system
+    - Delivery partner loyalty
+    - Loyalty analytics
+  Database: PostgreSQL (loyalty schema)
+  Port: 3017
+
+SERVICE 18: WHATSAPP SERVICE (daltaners-whatsapp-service)
+  Domain: WhatsApp Business Integration
+  Responsibilities:
+    - WhatsApp Business API webhook handling
+    - Conversational ordering flow
+    - Message template management
+    - Order status broadcasts
+    - Catalog sharing
+    - Customer support routing
+  Database: PostgreSQL (whatsapp schema) + CassandraDB 
+            (whatsapp_messages)
+  Port: 3018
+
+SERVICE 19: CAR RENTAL SERVICE (daltaners-carrental-service)
+  Domain: Vehicle Rental Management
+  Responsibilities:
+    - Vehicle listing and availability
+    - Booking management
+    - Pricing calculation
+    - Insurance integration
+    - Driver license verification
+    - Vehicle condition tracking
+  Database: PostgreSQL (carrental schema)
+  Port: 3019
+
+SERVICE 20: ANALYTICS SERVICE (daltaners-analytics-service)
+  Domain: Business Intelligence and Reporting
+  Responsibilities:
+    - Real-time dashboard data aggregation
+    - Custom report generation
+    - Data export (CSV, PDF, Excel)
+    - Scheduled report delivery
+    - KPI tracking and alerting
+    - Cohort analysis
+    - Funnel analysis
+  Database: TimescaleDB (metrics) + Elasticsearch (analytics_events)
+  Port: 3020
+
+SERVICE 21: AI/ML SERVICE (daltaners-ml-service)
+  Domain: Machine Learning and AI
+  Responsibilities:
+    - Recommendation engine
+    - Demand forecasting
+    - Fraud detection scoring
+    - ETA prediction
+    - Dynamic pricing optimization
+    - Search ranking ML
+    - Image recognition (visual search)
+  Runtime: Python (FastAPI) or Node.js wrapper for ML models
+  Database: Feature Store (Feast) + Redis (model cache)
+  Port: 3021
+
+SERVICE 22: FILE/MEDIA SERVICE (daltaners-media-service)
+  Domain: File Upload and Media Management
+  Responsibilities:
+    - Image upload and processing
+    - Image resizing/optimization
+    - Document upload (KYC, prescriptions)
+    - CDN URL generation
+    - Virus scanning
+    - Storage quota management
+  Storage: AWS S3 / Cloudflare R2
+  Port: 3022
+
+4.2 SERVICE COMMUNICATION PATTERNS
+--------------------------------------
+
+SYNCHRONOUS COMMUNICATION:
+- Protocol: REST over HTTP/2 (external APIs)
+- Protocol: gRPC (inter-service communication for low-latency calls)
+- Pattern: Request-Response
+- Use Cases:
+  * Order creation (needs immediate response)
+  * Payment processing (needs confirmation)
+  * Authentication (token validation)
+  * Search queries
+  * Cart operations
+
+ASYNCHRONOUS COMMUNICATION:
+- Broker: Apache Kafka (event streaming)
+- Broker: RabbitMQ (task queues)
+- Patterns:
+  * Event Sourcing: Order lifecycle events
+  * Publish-Subscribe: Order status updates, inventory changes
+  * Command Queue: Email sending, push notifications
+  * Dead Letter Queue: Failed event handling
+
+KEY EVENT FLOWS:
+
+Event: ORDER_PLACED
+  Producer: Order Service
+  Consumers:
+    - Inventory Service (reserve stock)
+    - Vendor Service (notify vendor)
+    - Delivery Service (initiate assignment)
+    - Payment Service (initiate payment capture)
+    - Notification Service (send confirmation)
+    - Analytics Service (record event)
+
+Event: ORDER_STATUS_CHANGED
+  Producer: Order Service
+  Consumers:
+    - Notification Service (push notification)
+    - Delivery Service (update tracking)
+    - Analytics Service (record transition)
+    - WhatsApp Service (status message)
+
+Event: INVENTORY_LOW
+  Producer: Inventory Service
+  Consumers:
+    - Vendor Service (alert vendor)
+    - AI/ML Service (trigger demand forecast)
+    - Notification Service (send alert)
+
+Event: PAYMENT_COMPLETED
+  Producer: Payment Service
+  Consumers:
+    - Order Service (update order status)
+    - Vendor Service (update settlement)
+    - Loyalty Service (award points)
+    - Analytics Service (record revenue)
+
+Event: DELIVERY_LOCATION_UPDATE
+  Producer: Delivery Service
+  Consumers:
+    - Order Service (update ETA)
+    - Notification Service (customer notification at milestones)
+    - Analytics Service (route analytics)
+
+KAFKA TOPIC DESIGN:
+  daltaners.orders.events          (partitioned by vendor_zone_id)
+  daltaners.orders.status          (partitioned by order_id)
+  daltaners.payments.events        (partitioned by order_id)
+  daltaners.inventory.events       (partitioned by store_id)
+  daltaners.delivery.tracking      (partitioned by delivery_id)
+  daltaners.delivery.assignments   (partitioned by zone_id)
+  daltaners.notifications.outbound (partitioned by channel_type)
+  daltaners.users.events           (partitioned by user_id)
+  daltaners.analytics.events       (partitioned by event_type)
+  daltaners.search.indexing        (partitioned by entity_type)
+
+4.3 API GATEWAY DESIGN
+--------------------------------------
+Implementation: Kong Gateway OR Custom NestJS Gateway Service
+
+RESPONSIBILITIES:
+- Request routing to appropriate microservice
+- API versioning (URL path: /api/v1/, /api/v2/)
+- Rate limiting (per-user, per-endpoint)
+- Request/response transformation
+- Authentication token validation
+- Request logging
+- CORS management
+- API key management (for third-party integrations)
+- Circuit breaker for downstream services
+- Response caching (for idempotent GET requests)
+
+RATE LIMITING TIERS:
+  Customer App:     100 requests/minute per user
+  Vendor Dashboard: 200 requests/minute per vendor
+  Delivery App:     150 requests/minute per rider
+  Admin Panel:      300 requests/minute per admin
+  Public API:        60 requests/minute per API key
+
+API VERSIONING STRATEGY:
+  - URL path versioning: /api/v1/orders, /api/v2/orders
+  - Deprecation policy: Minimum 6 months notice before version sunset
+  - Maximum 3 concurrent API versions
+
+4.4 SERVICE MESH ARCHITECTURE
+--------------------------------------
+Implementation: Istio 1.21+
+
+FEATURES:
+- Mutual TLS between all services (mTLS)
+- Service discovery
+- Load balancing (round-robin, least connections)
+- Circuit breaking
+- Retry policies
+- Timeout management
+- Traffic splitting (canary deployments)
+- Observability (distributed tracing injection)
+
+TRAFFIC POLICIES:
+  Default retry: 3 attempts with exponential backoff
+  Default timeout: 10 seconds (configurable per route)
+  Circuit breaker: Open after 5 consecutive failures, half-open after 30s
+
+================================================================================
+5. DATABASE ARCHITECTURE
+================================================================================
+
+5.1 POSTGRESQL SCHEMA DESIGN
+--------------------------------------
+PostgreSQL serves as the primary OLTP database for all transactional data
+requiring ACID compliance, complex relationships, and strong consistency.
+
+DEPLOYMENT:
+  - Primary instance + 2 read replicas
+  - Streaming replication (synchronous for primary replica)
+  - Connection pooling via PgBouncer
+  - Automated backup: WAL archiving + daily base backups
+  - Extensions: PostGIS, pg_trgm, uuid-ossp, TimescaleDB
+
+KEY SCHEMAS:
+
+-- AUTH SCHEMA
+auth.users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email VARCHAR(255) UNIQUE,
+    phone VARCHAR(20) UNIQUE,
+    password_hash VARCHAR(255),
+    role ENUM('customer', 'vendor_owner', 'vendor_staff', 'delivery', 'admin'),
+    is_verified BOOLEAN DEFAULT FALSE,
+    is_active BOOLEAN DEFAULT TRUE,
+    mfa_enabled BOOLEAN DEFAULT FALSE,
+    mfa_secret VARCHAR(255),
+    last_login_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+)
+INDEX: idx_users_email, idx_users_phone, idx_users_role
+
+auth.refresh_tokens (
+    id UUID PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id),
+    token_hash VARCHAR(255) UNIQUE,
+    device_info JSONB,
+    expires_at TIMESTAMPTZ,
+    revoked_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+)
+
+auth.social_accounts (
+    id UUID PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id),
+    provider ENUM('google', 'facebook', 'apple'),
+    provider_id VARCHAR(255),
+    UNIQUE(provider, provider_id)
+)
+
+-- USER SCHEMA
+users.profiles (
+    id UUID PRIMARY KEY REFERENCES auth.users(id),
+    first_name VARCHAR(100),
+    last_name VARCHAR(100),
+    display_name VARCHAR(100),
+    avatar_url VARCHAR(500),
+    date_of_birth DATE,
+    gender ENUM('male', 'female', 'other', 'prefer_not_to_say'),
+    locale VARCHAR(10) DEFAULT 'en',
+    timezone VARCHAR(50) DEFAULT 'Asia/Manila',
+    preferences JSONB DEFAULT '{}',
+    dietary_preferences TEXT[],
+    allergens TEXT[],
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+)
+
+users.addresses (
+    id UUID PRIMARY KEY,
+    user_id UUID REFERENCES users.profiles(id),
+    label VARCHAR(50),  -- 'Home', 'Office', etc.
+    address_line1 VARCHAR(255),
+    address_line2 VARCHAR(255),
+    barangay VARCHAR(100),
+    city VARCHAR(100),
+    province VARCHAR(100),
+    region VARCHAR(100),
+    postal_code VARCHAR(10),
+    country VARCHAR(50) DEFAULT 'PH',
+    latitude DECIMAL(10, 8),
+    longitude DECIMAL(11, 8),
+    is_default BOOLEAN DEFAULT FALSE,
+    delivery_instructions TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+)
+INDEX: idx_addresses_user_id, GIST INDEX on (latitude, longitude)
+
+-- VENDOR SCHEMA
+vendors.stores (
+    id UUID PRIMARY KEY,
+    owner_id UUID REFERENCES auth.users(id),
+    name VARCHAR(255),
+    slug VARCHAR(255) UNIQUE,
+    description TEXT,
+    logo_url VARCHAR(500),
+    banner_url VARCHAR(500),
+    category ENUM('grocery', 'restaurant', 'pharmacy', 'electronics', 
+                   'fashion', 'general', 'specialty'),
+    status ENUM('pending', 'active', 'suspended', 'closed'),
+    commission_rate DECIMAL(5, 2),
+    subscription_tier ENUM('free', 'silver', 'gold', 'platinum'),
+    contact_phone VARCHAR(20),
+    contact_email VARCHAR(255),
+    business_permit_url VARCHAR(500),
+    dti_registration VARCHAR(100),
+    bir_tin VARCHAR(50),
+    preparation_time_minutes INTEGER DEFAULT 30,
+    minimum_order_value DECIMAL(10, 2) DEFAULT 0,
+    rating_average DECIMAL(3, 2) DEFAULT 0,
+    rating_count INTEGER DEFAULT 0,
+    total_orders INTEGER DEFAULT 0,
+    is_featured BOOLEAN DEFAULT FALSE,
+    metadata JSONB DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+)
+INDEX: idx_stores_owner, idx_stores_category, idx_stores_status
+
+vendors.store_locations (
+    id UUID PRIMARY KEY,
+    store_id UUID REFERENCES vendors.stores(id),
+    branch_name VARCHAR(255),
+    address_line1 VARCHAR(255),
+    address_line2 VARCHAR(255),
+    city VARCHAR(100),
+    province VARCHAR(100),
+    latitude DECIMAL(10, 8),
+    longitude DECIMAL(11, 8),
+    delivery_radius_km DECIMAL(5, 2) DEFAULT 5.0,
+    geofence GEOMETRY(Polygon, 4326),  -- PostGIS
+    is_primary BOOLEAN DEFAULT FALSE
+)
+INDEX: GIST INDEX on geofence, GIST INDEX on (latitude, longitude)
+
+vendors.operating_hours (
+    id UUID PRIMARY KEY,
+    store_location_id UUID REFERENCES vendors.store_locations(id),
+    day_of_week SMALLINT,  -- 0=Sunday, 6=Saturday
+    open_time TIME,
+    close_time TIME,
+    is_closed BOOLEAN DEFAULT FALSE
+)
+
+vendors.store_staff (
+    id UUID PRIMARY KEY,
+    store_id UUID REFERENCES vendors.stores(id),
+    user_id UUID REFERENCES auth.users(id),
+    role ENUM('manager', 'staff', 'cashier'),
+    permissions JSONB,
+    is_active BOOLEAN DEFAULT TRUE
+)
+
+-- CATALOG SCHEMA
+catalog.categories (
+    id UUID PRIMARY KEY,
+    parent_id UUID REFERENCES catalog.categories(id),
+    name VARCHAR(255),
+    slug VARCHAR(255),
+    icon_url VARCHAR(500),
+    sort_order INTEGER DEFAULT 0,
+    is_active BOOLEAN DEFAULT TRUE,
+    level SMALLINT DEFAULT 0
+)
+INDEX: idx_categories_parent, idx_categories_slug
+
+catalog.products (
+    id UUID PRIMARY KEY,
+    store_id UUID REFERENCES vendors.stores(id),
+    category_id UUID REFERENCES catalog.categories(id),
+    name VARCHAR(500),
+    slug VARCHAR(500),
+    description TEXT,
+    short_description VARCHAR(500),
+    sku VARCHAR(100),
+    barcode VARCHAR(100),
+    brand VARCHAR(255),
+    unit_type ENUM('piece', 'kg', 'g', 'liter', 'ml', 'pack', 'dozen',
+                    'box', 'bundle'),
+    unit_value DECIMAL(10, 3),
+    base_price DECIMAL(10, 2),
+    sale_price DECIMAL(10, 2),
+    cost_price DECIMAL(10, 2),
+    tax_rate DECIMAL(5, 2) DEFAULT 12.00,  -- Philippine VAT
+    is_taxable BOOLEAN DEFAULT TRUE,
+    weight_grams INTEGER,
+    dimensions JSONB,  -- {length, width, height}
+    is_active BOOLEAN DEFAULT TRUE,
+    is_featured BOOLEAN DEFAULT FALSE,
+    requires_prescription BOOLEAN DEFAULT FALSE,
+    is_perishable BOOLEAN DEFAULT FALSE,
+    shelf_life_days INTEGER,
+    nutritional_info JSONB,
+    allergens TEXT[],
+    dietary_tags TEXT[],  -- 'vegan', 'halal', 'gluten-free', etc.
+    rating_average DECIMAL(3, 2) DEFAULT 0,
+    rating_count INTEGER DEFAULT 0,
+    total_sold INTEGER DEFAULT 0,
+    sort_order INTEGER DEFAULT 0,
+    metadata JSONB DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+)
+INDEX: idx_products_store, idx_products_category, idx_products_barcode,
+       GIN INDEX on dietary_tags, GIN INDEX on allergens
+
+catalog.product_images (
+    id UUID PRIMARY KEY,
+    product_id UUID REFERENCES catalog.products(id) ON DELETE CASCADE,
+    url VARCHAR(500),
+    thumbnail_url VARCHAR(500),
+    alt_text VARCHAR(255),
+    sort_order INTEGER DEFAULT 0,
+    is_primary BOOLEAN DEFAULT FALSE
+)
+
+catalog.product_variants (
+    id UUID PRIMARY KEY,
+    product_id UUID REFERENCES catalog.products(id) ON DELETE CASCADE,
+    name VARCHAR(255),  -- e.g., "500g", "Red", "Large"
+    sku VARCHAR(100),
+    price_adjustment DECIMAL(10, 2) DEFAULT 0,
+    stock_quantity INTEGER DEFAULT 0,
+    is_active BOOLEAN DEFAULT TRUE,
+    attributes JSONB  -- {size: "L", color: "red", weight: "500g"}
+)
+
+-- INVENTORY SCHEMA
+inventory.stock (
+    id UUID PRIMARY KEY,
+    product_id UUID REFERENCES catalog.products(id),
+    variant_id UUID REFERENCES catalog.product_variants(id),
+    store_location_id UUID REFERENCES vendors.store_locations(id),
+    quantity INTEGER DEFAULT 0,
+    reserved_quantity INTEGER DEFAULT 0,
+    reorder_point INTEGER DEFAULT 10,
+    reorder_quantity INTEGER DEFAULT 50,
+    batch_number VARCHAR(100),
+    expiry_date DATE,
+    last_restocked_at TIMESTAMPTZ,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+)
+INDEX: idx_stock_product, idx_stock_location, idx_stock_expiry
+
+inventory.stock_movements (
+    id UUID PRIMARY KEY,
+    stock_id UUID REFERENCES inventory.stock(id),
+    movement_type ENUM('in', 'out', 'adjustment', 'reservation', 
+                        'release', 'return'),
+    quantity INTEGER,
+    reference_type VARCHAR(50),  -- 'order', 'manual', 'pos', 'return'
+    reference_id UUID,
+    notes TEXT,
+    performed_by UUID REFERENCES auth.users(id),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+)
+INDEX: idx_movements_stock, idx_movements_created (BRIN)
+
+-- ORDERS SCHEMA
+orders.orders (
+    id UUID PRIMARY KEY,
+    order_number VARCHAR(20) UNIQUE,  -- BIR-2024-XXXXXX
+    customer_id UUID REFERENCES auth.users(id),
+    store_id UUID REFERENCES vendors.stores(id),
+    store_location_id UUID REFERENCES vendors.store_locations(id),
+    status ENUM('pending', 'confirmed', 'preparing', 'ready', 
+                'picked_up', 'in_transit', 'delivered', 'cancelled', 
+                'returned', 'refunded'),
+    order_type ENUM('delivery', 'pickup'),
+    service_type ENUM('grocery', 'food', 'pharmacy', 'parcel'),
+    delivery_type ENUM('standard', 'express', 'scheduled', 'instant'),
+    scheduled_at TIMESTAMPTZ,
+    subtotal DECIMAL(12, 2),
+    delivery_fee DECIMAL(10, 2),
+    service_fee DECIMAL(10, 2),
+    tax_amount DECIMAL(10, 2),
+    discount_amount DECIMAL(10, 2),
+    tip_amount DECIMAL(10, 2) DEFAULT 0,
+    total_amount DECIMAL(12, 2),
+    payment_method ENUM('card', 'gcash', 'maya', 'grabpay', 'cod', 
+                         'wallet', 'bank_transfer'),
+    payment_status ENUM('pending', 'authorized', 'captured', 'failed', 
+                         'refunded', 'partially_refunded'),
+    delivery_address JSONB,
+    delivery_instructions TEXT,
+    substitution_policy ENUM('accept_similar', 'specific_only', 
+                              'refund_only') DEFAULT 'refund_only',
+    coupon_id UUID,
+    coupon_code VARCHAR(50),
+    customer_notes TEXT,
+    cancellation_reason TEXT,
+    estimated_delivery_at TIMESTAMPTZ,
+    actual_delivery_at TIMESTAMPTZ,
+    prepared_at TIMESTAMPTZ,
+    picked_up_at TIMESTAMPTZ,
+    metadata JSONB DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+)
+INDEX: idx_orders_customer, idx_orders_store, idx_orders_status,
+       idx_orders_created (BRIN), idx_orders_number
+
+orders.order_items (
+    id UUID PRIMARY KEY,
+    order_id UUID REFERENCES orders.orders(id) ON DELETE CASCADE,
+    product_id UUID REFERENCES catalog.products(id),
+    variant_id UUID REFERENCES catalog.product_variants(id),
+    product_name VARCHAR(500),  -- Denormalized for history
+    product_image_url VARCHAR(500),
+    unit_price DECIMAL(10, 2),
+    quantity INTEGER,
+    total_price DECIMAL(10, 2),
+    discount_amount DECIMAL(10, 2) DEFAULT 0,
+    special_instructions TEXT,
+    substitution_product_id UUID,
+    status ENUM('pending', 'confirmed', 'substituted', 'unavailable',
+                'cancelled')
+)
+
+-- DELIVERY SCHEMA
+delivery.delivery_personnel (
+    id UUID PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id),
+    vehicle_type ENUM('bicycle', 'motorcycle', 'car', 'van', 'walking'),
+    vehicle_plate VARCHAR(20),
+    license_number VARCHAR(50),
+    license_expiry DATE,
+    status ENUM('pending', 'active', 'suspended', 'inactive'),
+    is_online BOOLEAN DEFAULT FALSE,
+    current_latitude DECIMAL(10, 8),
+    current_longitude DECIMAL(11, 8),
+    current_zone_id UUID,
+    max_concurrent_orders SMALLINT DEFAULT 2,
+    current_order_count SMALLINT DEFAULT 0,
+    rating_average DECIMAL(3, 2) DEFAULT 0,
+    total_deliveries INTEGER DEFAULT 0,
+    bank_account_info JSONB,
+    insurance_info JSONB,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+)
+INDEX: GIST INDEX on (current_latitude, current_longitude),
+       idx_delivery_status, idx_delivery_zone
+
+delivery.deliveries (
+    id UUID PRIMARY KEY,
+    order_id UUID REFERENCES orders.orders(id),
+    personnel_id UUID REFERENCES delivery.delivery_personnel(id),
+    status ENUM('assigned', 'accepted', 'at_store', 'picked_up',
+                'in_transit', 'arrived', 'delivered', 'failed',
+                'cancelled'),
+    pickup_location JSONB,
+    dropoff_location JSONB,
+    estimated_pickup_at TIMESTAMPTZ,
+    actual_pickup_at TIMESTAMPTZ,
+    estimated_delivery_at TIMESTAMPTZ,
+    actual_delivery_at TIMESTAMPTZ,
+    distance_km DECIMAL(8, 2),
+    delivery_fee DECIMAL(10, 2),
+    tip_amount DECIMAL(10, 2),
+    proof_of_delivery JSONB,  -- {photo_url, signature_url, otp_verified}
+    cod_amount DECIMAL(10, 2) DEFAULT 0,
+    cod_collected BOOLEAN DEFAULT FALSE,
+    failure_reason TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+)
+INDEX: idx_deliveries_order, idx_deliveries_personnel, idx_deliveries_status
+
+-- PAYMENT SCHEMA
+payments.transactions (
+    id UUID PRIMARY KEY,
+    order_id UUID REFERENCES orders.orders(id),
+    user_id UUID REFERENCES auth.users(id),
+    type ENUM('charge', 'refund', 'payout', 'top_up', 'transfer'),
+    method ENUM('card', 'gcash', 'maya', 'grabpay', 'cod', 'wallet',
+                'bank_transfer'),
+    status ENUM('pending', 'processing', 'completed', 'failed', 
+                'cancelled', 'reversed'),
+    amount DECIMAL(12, 2),
+    currency VARCHAR(3) DEFAULT 'PHP',
+    gateway_transaction_id VARCHAR(255),
+    gateway_response JSONB,
+    idempotency_key VARCHAR(255) UNIQUE,
+    metadata JSONB DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    completed_at TIMESTAMPTZ
+)
+INDEX: idx_transactions_order, idx_transactions_user, 
+       idx_transactions_gateway, idx_transactions_created (BRIN)
+
+payments.vendor_settlements (
+    id UUID PRIMARY KEY,
+    vendor_id UUID REFERENCES vendors.stores(id),
+    period_start TIMESTAMPTZ,
+    period_end TIMESTAMPTZ,
+    gross_amount DECIMAL(12, 2),
+    commission_amount DECIMAL(12, 2),
+    net_amount DECIMAL(12, 2),
+    withholding_tax DECIMAL(10, 2),
+    adjustment_amount DECIMAL(10, 2) DEFAULT 0,
+    final_amount DECIMAL(12, 2),
+    status ENUM('pending', 'processing', 'completed', 'failed'),
+    payment_reference VARCHAR(255),
+    settlement_date TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+)
+
+-- ZONE SCHEMA
+zones.delivery_zones (
+    id UUID PRIMARY KEY,
+    name VARCHAR(255),
+    city VARCHAR(100),
+    province VARCHAR(100),
+    region VARCHAR(100),
+    boundary GEOMETRY(Polygon, 4326),  -- PostGIS
+    base_delivery_fee DECIMAL(10, 2),
+    per_km_fee DECIMAL(10, 2),
+    surge_multiplier DECIMAL(3, 2) DEFAULT 1.00,
+    is_active BOOLEAN DEFAULT TRUE,
+    max_delivery_radius_km DECIMAL(5, 2) DEFAULT 10.0,
+    capacity_limit INTEGER,  -- max concurrent deliveries
+    current_capacity INTEGER DEFAULT 0,
+    metadata JSONB DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+)
+INDEX: GIST INDEX on boundary
+
+-- PROMOTIONS SCHEMA
+promotions.coupons (
+    id UUID PRIMARY KEY,
+    code VARCHAR(50) UNIQUE,
+    name VARCHAR(255),
+    description TEXT,
+    discount_type ENUM('percentage', 'fixed_amount', 'free_delivery'),
+    discount_value DECIMAL(10, 2),
+    minimum_order_value DECIMAL(10, 2),
+    maximum_discount DECIMAL(10, 2),
+    applicable_categories UUID[],
+    applicable_stores UUID[],
+    usage_limit INTEGER,
+    usage_count INTEGER DEFAULT 0,
+    per_user_limit INTEGER DEFAULT 1,
+    is_first_order_only BOOLEAN DEFAULT FALSE,
+    valid_from TIMESTAMPTZ,
+    valid_until TIMESTAMPTZ,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_by UUID REFERENCES auth.users(id),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+)
+
+-- REVIEWS SCHEMA
+reviews.reviews (
+    id UUID PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id),
+    order_id UUID REFERENCES orders.orders(id),
+    reviewable_type ENUM('store', 'product', 'delivery_personnel'),
+    reviewable_id UUID,
+    rating SMALLINT CHECK (rating BETWEEN 1 AND 5),
+    title VARCHAR(255),
+    body TEXT,
+    images TEXT[],
+    is_verified_purchase BOOLEAN DEFAULT TRUE,
+    is_approved BOOLEAN DEFAULT TRUE,
+    vendor_response TEXT,
+    vendor_response_at TIMESTAMPTZ,
+    helpful_count INTEGER DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+)
+INDEX: idx_reviews_reviewable, idx_reviews_user, idx_reviews_rating
+
+-- LOYALTY SCHEMA
+loyalty.accounts (
+    id UUID PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) UNIQUE,
+    account_type ENUM('customer', 'delivery'),
+    points_balance INTEGER DEFAULT 0,
+    lifetime_points INTEGER DEFAULT 0,
+    tier ENUM('bronze', 'silver', 'gold', 'platinum') DEFAULT 'bronze',
+    tier_expires_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+)
+
+loyalty.transactions (
+    id UUID PRIMARY KEY,
+    account_id UUID REFERENCES loyalty.accounts(id),
+    type ENUM('earn', 'redeem', 'expire', 'adjust', 'bonus'),
+    points INTEGER,
+    balance_after INTEGER,
+    reference_type VARCHAR(50),
+    reference_id UUID,
+    description VARCHAR(255),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+)
+
+-- WALLET SCHEMA
+wallet.wallets (
+    id UUID PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) UNIQUE,
+    balance DECIMAL(12, 2) DEFAULT 0 CHECK (balance >= 0),
+    currency VARCHAR(3) DEFAULT 'PHP',
+    is_active BOOLEAN DEFAULT TRUE,
+    daily_limit DECIMAL(12, 2) DEFAULT 50000,
+    monthly_limit DECIMAL(12, 2) DEFAULT 500000,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+)
+
+wallet.transactions (
+    id UUID PRIMARY KEY,
+    wallet_id UUID REFERENCES wallet.wallets(id),
+    type ENUM('top_up', 'payment', 'refund', 'transfer_in', 
+              'transfer_out', 'withdrawal'),
+    amount DECIMAL(12, 2),
+    balance_after DECIMAL(12, 2),
+    reference_type VARCHAR(50),
+    reference_id UUID,
+    description VARCHAR(255),
+    status ENUM('pending', 'completed', 'failed', 'reversed'),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+)
+
+5.2 CASSANDRADB SCHEMA DESIGN
+--------------------------------------
+CassandraDB is used for high-write-throughput data, time-series data, and 
+data that benefits from horizontal scaling without requiring complex joins 
+or transactions.
+
+DEPLOYMENT:
+  - 6-node cluster (minimum for production, 3 per data center)
+  - Replication factor: 3
+  - Consistency level: LOCAL_QUORUM (read/write)
+  - Compaction strategy: LeveledCompactionStrategy (default),
+    TimeWindowCompactionStrategy (for time-series)
+
+KEYSPACE CONFIGURATION:
+CREATE KEYSPACE daltaners_tracking
+  WITH replication = {
+    'class': 'NetworkTopologyStrategy',
+    'dc1': 3, 'dc2': 3
+  }
+  AND durable_writes = true;
+
+KEY TABLES:
+
+-- GPS TRACKING (High-frequency writes from delivery personnel)
+CREATE TABLE daltaners_tracking.gps_locations (
+    delivery_id UUID,
+    personnel_id UUID,
+    recorded_at TIMESTAMP,
+    latitude DECIMAL,
+    longitude DECIMAL,
+    speed DECIMAL,
+    heading DECIMAL,
+    accuracy DECIMAL,
+    battery_level SMALLINT,
+    PRIMARY KEY ((delivery_id), recorded_at)
+) WITH CLUSTERING ORDER BY (recorded_at DESC)
+  AND compaction = {'class': 'TimeWindowCompactionStrategy',
+                     'compaction_window_size': 1,
+                     'compaction_window_unit': 'HOURS'}
+  AND default_time_to_live = 2592000;  -- 30 days TTL
+
+-- DELIVERY PERSONNEL LOCATION (Current location lookup)
+CREATE TABLE daltaners_tracking.personnel_current_location (
+    zone_id UUID,
+    personnel_id UUID,
+    latitude DECIMAL,
+    longitude DECIMAL,
+    is_online BOOLEAN,
+    current_orders SMALLINT,
+    vehicle_type TEXT,
+    updated_at TIMESTAMP,
+    PRIMARY KEY ((zone_id), personnel_id)
+);
+
+-- ORDER EVENTS (Event sourcing for order lifecycle)
+CREATE TABLE daltaners_tracking.order_events (
+    order_id UUID,
+    event_id TIMEUUID,
+    event_type TEXT,
+    event_data TEXT,  -- JSON
+    actor_id UUID,
+    actor_type TEXT,  -- 'customer', 'vendor', 'system', 'delivery'
+    created_at TIMESTAMP,
+    PRIMARY KEY ((order_id), event_id)
+) WITH CLUSTERING ORDER BY (event_id ASC)
+  AND default_time_to_live = 31536000;  -- 1 year TTL
+
+-- NOTIFICATION LOG (High-volume notification history)
+CREATE TABLE daltaners_tracking.notification_log (
+    user_id UUID,
+    sent_at TIMESTAMP,
+    notification_id UUID,
+    channel TEXT,  -- 'push', 'sms', 'email', 'whatsapp'
+    title TEXT,
+    body TEXT,
+    data TEXT,  -- JSON payload
+    status TEXT,  -- 'sent', 'delivered', 'read', 'failed'
+    PRIMARY KEY ((user_id), sent_at, notification_id)
+) WITH CLUSTERING ORDER BY (sent_at DESC)
+  AND default_time_to_live = 7776000;  -- 90 days TTL
+
+-- CHAT MESSAGES (High-volume messaging)
+CREATE TABLE daltaners_tracking.chat_messages (
+    conversation_id UUID,
+    message_id TIMEUUID,
+    sender_id UUID,
+    sender_type TEXT,  -- 'customer', 'vendor', 'delivery', 'system'
+    message_type TEXT,  -- 'text', 'image', 'location', 'system'
+    content TEXT,
+    media_url TEXT,
+    read_at TIMESTAMP,
+    created_at TIMESTAMP,
+    PRIMARY KEY ((conversation_id), message_id)
+) WITH CLUSTERING ORDER BY (message_id ASC)
+  AND default_time_to_live = 31536000;  -- 1 year TTL
+
+-- ANALYTICS EVENTS (High-volume user behavior tracking)
+CREATE TABLE daltaners_tracking.analytics_events (
+    event_date DATE,
+    event_hour SMALLINT,
+    event_id TIMEUUID,
+    user_id UUID,
+    event_type TEXT,
+    event_category TEXT,
+    properties TEXT,  -- JSON
+    device_info TEXT,  -- JSON
+    session_id UUID,
+    PRIMARY KEY ((event_date, event_hour), event_id)
+) WITH CLUSTERING ORDER BY (event_id DESC)
+  AND compaction = {'class': 'TimeWindowCompactionStrategy',
+                     'compaction_window_size': 1,
+                     'compaction_window_unit': 'DAYS'}
+  AND default_time_to_live = 7776000;  -- 90 days TTL
+
+-- PRODUCT VIEW HISTORY (Recommendations input)
+CREATE TABLE daltaners_tracking.product_views (
+    user_id UUID,
+    viewed_at TIMESTAMP,
+    product_id UUID,
+    store_id UUID,
+    category_id UUID,
+    view_duration_seconds INT,
+    source TEXT,  -- 'search', 'browse', 'recommendation', 'ad'
+    PRIMARY KEY ((user_id), viewed_at)
+) WITH CLUSTERING ORDER BY (viewed_at DESC)
+  AND default_time_to_live = 5184000;  -- 60 days TTL
+
+-- SEARCH LOG (Search analytics and trending)
+CREATE TABLE daltaners_tracking.search_log (
+    search_date DATE,
+    search_id TIMEUUID,
+    user_id UUID,
+    query TEXT,
+    results_count INT,
+    clicked_product_id UUID,
+    zone_id UUID,
+    PRIMARY KEY ((search_date), search_id)
+) WITH CLUSTERING ORDER BY (search_id DESC)
+  AND default_time_to_live = 7776000;  -- 90 days TTL
+
+5.3 HYBRID DATABASE STRATEGY
+--------------------------------------
+The hybrid approach assigns each data type to the database engine that best 
+serves its access patterns:
+
++---------------------------+-------------+----------------------------------+
+| Data Type                 | Database    | Rationale                        |
++---------------------------+-------------+----------------------------------+
+| User accounts, profiles   | PostgreSQL  | ACID, relational joins, auth     |
+| Vendor/store data         | PostgreSQL  | Complex relations, business rules|
+| Product catalog           | PostgreSQL  | Relations + Elasticsearch mirror |
+| Inventory stock levels    | PostgreSQL  | ACID for stock reservations      |
+| Orders & transactions     | PostgreSQL  | ACID, financial integrity        |
+| Payment records           | PostgreSQL  | Strict consistency, auditing     |
+| Zone/geo data             | PostgreSQL  | PostGIS spatial queries          |
+| GPS tracking history      | CassandraDB | High write throughput, TTL       |
+| Order event sourcing      | CassandraDB | Append-only, high volume         |
+| Chat messages             | CassandraDB | High write, time-series access   |
+| Notification logs         | CassandraDB | High volume, TTL-based cleanup   |
+| Analytics events          | CassandraDB | Massive write volume, partitioned|
+| Product view history      | CassandraDB | Write-heavy user behavior data   |
+| Search logs               | CassandraDB | High volume, time-partitioned    |
+| Product search index      | Elasticsearch| Full-text search, facets        |
+| Session data              | Redis       | Fast access, auto-expiry         |
+| Real-time locations       | Redis       | Pub/Sub, geo commands            |
+| Cache layer               | Redis       | Hot data caching                 |
+| Rate limiting counters    | Redis       | Atomic increments                |
+| Time-series metrics       | TimescaleDB | Aggregation, downsampling        |
+| Files/images              | S3/R2       | Object storage, CDN integration  |
++---------------------------+-------------+----------------------------------+
+
+DATA SYNCHRONIZATION:
+- PostgreSQL -> Elasticsearch: Change Data Capture (CDC) via Debezium
+- PostgreSQL -> Redis Cache: Write-through + TTL-based invalidation
+- Kafka events -> CassandraDB: Kafka Connect with Cassandra Sink Connector
+- CassandraDB -> Analytics: Spark jobs for batch aggregation
+
+5.4 REDIS CACHING STRATEGY
+--------------------------------------
+DEPLOYMENT: Redis Cluster (6 nodes: 3 masters + 3 replicas)
+
+CACHE LAYERS:
+
+Layer 1: API Response Cache (TTL: 60-300 seconds)
+  - Product listings by category: cache:products:cat:{category_id}:{page}
+  - Store profiles: cache:store:{store_id}
+  - Store listings by zone: cache:stores:zone:{zone_id}
+
+Layer 2: Session & Auth Cache (TTL: 3600 seconds)
+  - User sessions: session:{user_id}:{device_id}
+  - JWT blacklist: blacklist:jwt:{jti}
+  - OTP storage: otp:{phone}:{purpose}
+
+Layer 3: Real-Time Data (TTL: 10-30 seconds)
+  - Delivery personnel locations: geo:riders:{zone_id}
+    (using Redis GEOADD/GEOSEARCH for proximity queries)
+  - Order status: order:status:{order_id}
+  - Active delivery tracking: tracking:{delivery_id}
+
+Layer 4: Business Logic Cache (TTL: 300-3600 seconds)
+  - Inventory stock levels: stock:{product_id}:{location_id}
+  - Price lookups: price:{product_id}:{variant_id}
+  - Promotion/coupon validation: coupon:{code}
+  - Zone delivery fees: zone:fee:{zone_id}
+  - Surge pricing multipliers: surge:{zone_id}
+
+Layer 5: Computed/Aggregated Data (TTL: 600-3600 seconds)
+  - Trending searches: trending:search:{zone_id}
+  - Popular products: popular:{zone_id}:{category_id}
+  - Store ratings: rating:{store_id}
+
+CACHE INVALIDATION STRATEGY:
+  - Write-through for critical data (inventory, prices)
+  - Event-driven invalidation via Kafka consumers
+  - TTL-based expiry for non-critical data
+  - Manual purge via admin panel for emergency updates
+
+5.5 ELASTICSEARCH INDEX DESIGN
+--------------------------------------
+DEPLOYMENT: 3-node Elasticsearch cluster (primary + 2 replicas)
+
+INDEX: daltaners_products
+{
+  "settings": {
+    "number_of_shards": 5,
+    "number_of_replicas": 2,
+    "analysis": {
+      "analyzer": {
+        "product_analyzer": {
+          "type": "custom",
+          "tokenizer": "standard",
+          "filter": [
+            "lowercase",
+            "asciifolding",
+            "synonym_filter",
+            "edge_ngram_filter"
+          ]
+        },
+        "filipino_analyzer": {
+          "type": "custom",
+          "tokenizer": "standard",
+          "filter": ["lowercase", "asciifolding"]
+        }
+      },
+      "filter": {
+        "synonym_filter": {
+          "type": "synonym",
+          "synonyms": [
+            "bigas, rice",
+            "asukal, sugar",
+            "gatas, milk"
+          ]
+        },
+        "edge_ngram_filter": {
+          "type": "edge_ngram",
+          "min_gram": 2,
+          "max_gram": 15
+        }
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+      "id": { "type": "keyword" },
+      "store_id": { "type": "keyword" },
+      "store_name": { "type": "text" },
+      "name": {
+        "type": "text",
+        "analyzer": "product_analyzer",
+        "fields": {
+          "exact": { "type": "keyword" },
+          "filipino": { "type": "text", "analyzer": "filipino_analyzer" }
+        }
+      },
+      "description": { "type": "text" },
+      "category_id": { "type": "keyword" },
+      "category_path": { "type": "keyword" },
+      "brand": { "type": "keyword" },
+      "price": { "type": "float" },
+      "sale_price": { "type": "float" },
+      "rating": { "type": "float" },
+      "rating_count": { "type": "integer" },
+      "total_sold": { "type": "integer" },
+      "dietary_tags": { "type": "keyword" },
+      "allergens": { "type": "keyword" },
+      "is_available": { "type": "boolean" },
+      "store_location": { "type": "geo_point" },
+      "zone_ids": { "type": "keyword" },
+      "image_url": { "type": "keyword", "index": false },
+      "updated_at": { "type": "date" }
+    }
+  }
+}
+
+INDEX: daltaners_stores
+{
+  "mappings": {
+    "properties": {
+      "id": { "type": "keyword" },
+      "name": { "type": "text", "analyzer": "product_analyzer" },
+      "category": { "type": "keyword" },
+      "rating": { "type": "float" },
+      "delivery_time_minutes": { "type": "integer" },
+      "minimum_order": { "type": "float" },
+      "is_open": { "type": "boolean" },
+      "location": { "type": "geo_point" },
+      "zone_ids": { "type": "keyword" },
+      "tags": { "type": "keyword" }
+    }
+  }
+}
+
+================================================================================
+6. BACKEND ARCHITECTURE (NestJS)
+================================================================================
+
+6.1 MODULE STRUCTURE (Per Microservice Pattern)
+--------------------------------------
+Each microservice follows this standardized structure:
+
+daltaners-{service-name}/
+  src/
+    main.ts                          # Bootstrap + microservice setup
+    app.module.ts                    # Root module
+    config/
+      configuration.ts               # Environment configuration
+      database.config.ts             # DB connection config
+      kafka.config.ts                # Kafka producer/consumer config
+    common/
+      decorators/                    # Custom decorators
+      filters/                       # Exception filters
+      guards/                        # Auth guards
+      interceptors/                  # Logging, transform interceptors
+      pipes/                         # Validation pipes
+      interfaces/                    # Shared interfaces
+      dto/                           # Shared DTOs
+      constants/                     # Constants and enums
+      utils/                         # Utility functions
+    modules/
+      {domain}/
+        {domain}.module.ts
+        {domain}.controller.ts       # REST endpoints
+        {domain}.service.ts          # Business logic
+        {domain}.repository.ts       # Data access layer
+        dto/
+          create-{domain}.dto.ts
+          update-{domain}.dto.ts
+          {domain}-response.dto.ts
+        entities/
+          {domain}.entity.ts         # TypeORM entity
+        events/
+          {domain}.events.ts         # Event definitions
+        subscribers/
+          {domain}.subscriber.ts     # Kafka consumers
+        tests/
+          {domain}.service.spec.ts
+          {domain}.controller.spec.ts
+          {domain}.e2e.spec.ts
+    health/
+      health.module.ts               # K8s health checks
+      health.controller.ts
+  test/
+    jest-e2e.json
+  Dockerfile
+  .dockerignore
+  tsconfig.json
+  tsconfig.build.json
+  nest-cli.json
+
+6.2 AUTHENTICATION & AUTHORIZATION
+--------------------------------------
+
+JWT TOKEN STRUCTURE:
+{
+  "sub": "user_uuid",
+  "email": "user@example.com",
+  "role": "customer",
+  "permissions": ["order:create", "order:read"],
+  "vendor_id": null,
+  "iat": 1709000000,
+  "exp": 1709003600,
+  "jti": "unique_token_id"
+}
+
+TOKEN LIFECYCLE:
+  - Access Token TTL: 15 minutes
+  - Refresh Token TTL: 30 days
+  - Refresh Token Rotation: New refresh token on each use
+  - Token Revocation: Redis blacklist for JTI
+
+RBAC PERMISSION MODEL:
+  Role: customer
+    Permissions: order:create, order:read, order:cancel, profile:read, 
+                 profile:update, review:create, cart:manage
+  
+  Role: vendor_owner
+    Permissions: store:manage, product:manage, inventory:manage, 
+                 order:vendor_read, order:vendor_update, staff:manage,
+                 report:read, promotion:manage
+  
+  Role: vendor_staff
+    Permissions: product:read, product:update, inventory:update,
+                 order:vendor_read, order:vendor_update
+  
+  Role: delivery
+    Permissions: delivery:read, delivery:update, delivery:accept,
+                 earning:read
+  
+  Role: admin
+    Permissions: * (all permissions)
+  
+  Role: super_admin
+    Permissions: * + system:configure, admin:manage
+
+GUARD IMPLEMENTATION (NestJS):
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('vendor_owner', 'vendor_staff')
+  @Permissions('product:manage')
+
+6.3 EVENT-DRIVEN ARCHITECTURE
+--------------------------------------
+
+KAFKA CONFIGURATION (Per Service):
+
+// kafka.config.ts
+export const kafkaConfig = {
+  clientId: 'daltaners-{service-name}',
+  brokers: process.env.KAFKA_BROKERS.split(','),
+  ssl: true,
+  sasl: {
+    mechanism: 'scram-sha-256',
+    username: process.env.KAFKA_USERNAME,
+    password: process.env.KAFKA_PASSWORD,
+  },
+  consumer: {
+    groupId: 'daltaners-{service-name}-group',
+    sessionTimeout: 30000,
+    heartbeatInterval: 10000,
+    maxBytesPerPartition: 1048576,
+  },
+  producer: {
+    allowAutoTopicCreation: false,
+    idempotent: true,
+    maxInFlightRequests: 5,
+    acks: -1,  // all replicas
+  }
+};
+
+EVENT SCHEMA (CloudEvents Standard):
+{
+  "specversion": "1.0",
+  "id": "uuid",
+  "source": "daltaners/order-service",
+  "type": "com.daltaners.order.placed",
+  "datacontenttype": "application/json",
+  "time": "2026-02-26T10:00:00Z",
+  "data": {
+    "order_id": "uuid",
+    "customer_id": "uuid",
+    "store_id": "uuid",
+    "total_amount": 550.00,
+    "items_count": 5
+  }
+}
+
+6.4 CQRS PATTERN IMPLEMENTATION
+--------------------------------------
+For high-read/write ratio services (Order, Inventory, Analytics):
+
+COMMAND SIDE (Write):
+  - Accepts commands via REST/gRPC
+  - Validates business rules
+  - Writes to PostgreSQL (source of truth)
+  - Publishes domain events to Kafka
+
+QUERY SIDE (Read):
+  - Reads from optimized read models
+  - Redis cache for hot data
+  - Elasticsearch for search queries
+  - CassandraDB for historical/time-series queries
+
+EXAMPLE - ORDER SERVICE:
+  Command: CreateOrderCommand -> PostgreSQL + Kafka event
+  Query: GetOrdersByCustomer -> Redis cache -> PostgreSQL fallback
+  Query: SearchOrders -> Elasticsearch
+  Query: GetOrderEvents -> CassandraDB
+
+6.5 API DESIGN STANDARDS
+--------------------------------------
+
+URL CONVENTION:
+  Base: /api/v1/{resource}
+  CRUD: GET /api/v1/products, POST /api/v1/products
+  Detail: GET /api/v1/products/:id
+  Nested: GET /api/v1/stores/:storeId/products
+  Actions: POST /api/v1/orders/:id/cancel
+
+RESPONSE FORMAT:
+{
+  "success": true,
+  "data": { ... },
+  "meta": {
+    "page": 1,
+    "limit": 20,
+    "total": 150,
+    "totalPages": 8
+  },
+  "timestamp": "2026-02-26T10:00:00Z"
+}
+
+ERROR FORMAT:
+{
+  "success": false,
+  "error": {
+    "code": "ORDER_NOT_FOUND",
+    "message": "Order with ID xxx not found",
+    "details": [],
+    "statusCode": 404
+  },
+  "timestamp": "2026-02-26T10:00:00Z"
+}
+
+PAGINATION: Cursor-based for large datasets, offset-based for admin panels
+VERSIONING: URL path versioning (/v1/, /v2/)
+DOCUMENTATION: Auto-generated Swagger/OpenAPI 3.0
+
+================================================================================
+7. FRONTEND ARCHITECTURE
+================================================================================
+
+7.1 REACT WEB APPLICATION DESIGN
+--------------------------------------
+
+PROJECT STRUCTURE (Monorepo with Nx or Turborepo):
+
+apps/
+  customer-web/          # Customer-facing web app
+  vendor-dashboard/      # Vendor management dashboard
+  admin-panel/           # Admin super panel
+  pos-terminal/          # POS desktop app (Electron)
+packages/
+  ui/                    # Shared UI component library (Shadcn-based)
+  api-client/            # Auto-generated API client (from OpenAPI)
+  store/                 # Shared Zustand stores
+  types/                 # Shared TypeScript types
+  utils/                 # Shared utility functions
+  config/                # Shared configuration
+
+CUSTOMER WEB APP STRUCTURE:
+src/
+  app/
+    layout.tsx
+    page.tsx
+    (auth)/
+      login/page.tsx
+      register/page.tsx
+    (main)/
+      layout.tsx
+      page.tsx              # Home
+      search/page.tsx
+      store/[slug]/page.tsx
+      product/[id]/page.tsx
+      cart/page.tsx
+      checkout/page.tsx
+      orders/page.tsx
+      orders/[id]/page.tsx
+      profile/page.tsx
+      wallet/page.tsx
+  components/
+    ui/                     # Shadcn UI components
+    layout/
+      Header.tsx
+      Footer.tsx
+      Sidebar.tsx
+      Navigation.tsx
+    features/
+      auth/
+      cart/
+      checkout/
+      delivery-tracking/
+      product/
+      search/
+      store/
+      order/
+      profile/
+      loyalty/
+  hooks/
+    useAuth.ts
+    useCart.ts
+    useGeolocation.ts
+    useSocket.ts
+    useDebounce.ts
+  stores/                   # Zustand stores
+    authStore.ts
+    cartStore.ts
+    locationStore.ts
+    uiStore.ts
+  services/
+    api/                    # API service layer
+    socket/                 # Socket.IO client
+  lib/
+    utils.ts
+    constants.ts
+    validators.ts
+
+7.2 REACT NATIVE MOBILE APPLICATION DESIGN
+--------------------------------------
+
+SHARED CODEBASE STRATEGY:
+  - Shared: Business logic, API services, Zustand stores, types
+  - Platform-specific: Navigation, native modules, platform UI adaptations
+  - Three apps from one codebase: Customer, Vendor, Delivery
+
+PROJECT STRUCTURE:
+apps/
+  mobile/
+    src/
+      app/                          # App entry points
+        customer/                   # Customer app entry
+        vendor/                     # Vendor app entry
+        delivery/                   # Delivery app entry
+      screens/
+        customer/
+          HomeScreen.tsx
+          SearchScreen.tsx
+          StoreScreen.tsx
+          ProductScreen.tsx
+          CartScreen.tsx
+          CheckoutScreen.tsx
+          OrderTrackingScreen.tsx
+          OrderHistoryScreen.tsx
+          ProfileScreen.tsx
+          WalletScreen.tsx
+        vendor/
+          DashboardScreen.tsx
+          OrderManagementScreen.tsx
+          ProductManagementScreen.tsx
+          InventoryScreen.tsx
+          SettingsScreen.tsx
+        delivery/
+          HomeScreen.tsx
+          ActiveDeliveryScreen.tsx
+          NavigationScreen.tsx
+          EarningsScreen.tsx
+          ProfileScreen.tsx
+      components/
+        shared/                     # Cross-app components
+        customer/                   # Customer-specific components
+        vendor/                     # Vendor-specific components
+        delivery/                   # Delivery-specific components
+      navigation/
+        CustomerNavigator.tsx
+        VendorNavigator.tsx
+        DeliveryNavigator.tsx
+      stores/                       # Zustand stores (shared)
+      services/                     # API & Socket services
+      hooks/                        # Custom hooks
+      utils/
+      theme/                        # NativeWind theme config
+      i18n/                         # Internationalization
+        en.json
+        fil.json
+        ceb.json
+
+7.3 STATE MANAGEMENT (Zustand)
+--------------------------------------
+
+STORE DESIGN:
+
+// stores/authStore.ts
+interface AuthState {
+  user: User | null;
+  token: string | null;
+  refreshToken: string | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  login: (credentials: LoginDTO) => Promise<void>;
+  logout: () => Promise<void>;
+  refreshSession: () => Promise<void>;
+  updateProfile: (data: Partial<User>) => Promise<void>;
+}
+
+// stores/cartStore.ts
+interface CartState {
+  items: Map<string, CartItem[]>;  // keyed by store_id
+  selectedStoreId: string | null;
+  couponCode: string | null;
+  deliveryType: 'standard' | 'express' | 'scheduled';
+  scheduledTime: Date | null;
+  substitutionPolicy: SubstitutionPolicy;
+  addItem: (storeId: string, item: CartItem) => void;
+  removeItem: (storeId: string, itemId: string) => void;
+  updateQuantity: (storeId: string, itemId: string, qty: number) => void;
+  applyCoupon: (code: string) => Promise<boolean>;
+  getSubtotal: (storeId: string) => number;
+  getTotalItems: () => number;
+  clearCart: (storeId?: string) => void;
+}
+
+// stores/locationStore.ts
+interface LocationState {
+  currentLocation: GeoCoordinates | null;
+  selectedAddress: Address | null;
+  addresses: Address[];
+  currentZone: Zone | null;
+  setCurrentLocation: (coords: GeoCoordinates) => void;
+  setSelectedAddress: (address: Address) => void;
+  fetchAddresses: () => Promise<void>;
+}
+
+// stores/orderTrackingStore.ts
+interface OrderTrackingState {
+  activeOrders: Map<string, OrderTracking>;
+  riderLocation: GeoCoordinates | null;
+  eta: number | null;
+  subscribeToOrder: (orderId: string) => void;
+  unsubscribeFromOrder: (orderId: string) => void;
+  updateRiderLocation: (coords: GeoCoordinates) => void;
+}
+
+PERSISTENCE: Zustand persist middleware with AsyncStorage (mobile) / 
+localStorage (web) for auth and cart state.
+
+7.4 UI COMPONENT LIBRARY (Tailwind CSS + Shadcn)
+--------------------------------------
+
+DESIGN TOKENS:
+
+// tailwind.config.js
+module.exports = {
+  theme: {
+    extend: {
+      colors: {
+        daltaners: {
+          primary: '#FF6B35',      // Filipino sun orange
+          secondary: '#004E89',     // Deep blue
+          accent: '#FFD700',        // Gold
+          success: '#27AE60',
+          warning: '#F2994A',
+          error: '#EB5757',
+          background: '#FAFAFA',
+          surface: '#FFFFFF',
+          text: {
+            primary: '#1A1A1A',
+            secondary: '#666666',
+            muted: '#999999',
+          }
+        }
+      },
+      fontFamily: {
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        display: ['Plus Jakarta Sans', 'sans-serif'],
+      },
+      borderRadius: {
+        'card': '12px',
+        'button': '8px',
+        'input': '8px',
+      },
+      boxShadow: {
+        'card': '0 2px 8px rgba(0, 0, 0, 0.08)',
+        'elevated': '0 4px 16px rgba(0, 0, 0, 0.12)',
+      }
+    }
+  }
+};
+
+SHADCN COMPONENTS USED:
+  - Button, Input, Select, Checkbox, Radio, Switch, Slider
+  - Dialog, Sheet, Popover, Tooltip, Toast
+  - Card, Badge, Avatar, Separator
+  - Table, DataTable, Pagination
+  - Tabs, Accordion, Collapsible
+  - Command (for search), Combobox
+  - Calendar, DatePicker
+  - Form (with React Hook Form + Zod)
+  - NavigationMenu, Breadcrumb, Sidebar
+
+CUSTOM COMPONENTS:
+  - ProductCard (product image, name, price, add-to-cart)
+  - StoreCard (store logo, name, rating, delivery time)
+  - CartItem (product info, quantity controls, remove)
+  - OrderStatusTimeline (visual order progress)
+  - DeliveryMap (Google Maps with rider tracking)
+  - CategoryPills (horizontal scrollable category filter)
+  - PriceDisplay (price formatting with sale indicators)
+  - RatingStars (interactive rating input/display)
+  - QuantitySelector (increment/decrement with min/max)
+  - AddressSelector (address book with map picker)
+  - PaymentMethodSelector (payment method cards)
+  - SearchBar (with voice input and barcode scanner)
+
+7.5 DESIGN SYSTEM SPECIFICATION
+--------------------------------------
+
+TYPOGRAPHY SCALE:
+  Display: 32px / 40px line-height / Bold
+  H1: 24px / 32px / Bold
+  H2: 20px / 28px / Semibold
+  H3: 18px / 24px / Semibold
+  Body Large: 16px / 24px / Regular
+  Body: 14px / 20px / Regular
+  Body Small: 12px / 16px / Regular
+  Caption: 11px / 14px / Regular
+
+SPACING SCALE (based on 4px grid):
+  xs: 4px | sm: 8px | md: 12px | lg: 16px | xl: 24px | 2xl: 32px | 3xl: 48px
+
+BREAKPOINTS:
+  Mobile: 0-639px
+  Tablet: 640-1023px
+  Desktop: 1024-1279px
+  Wide: 1280px+
+
+ICONOGRAPHY: Lucide React icons (consistent with Shadcn)
+
+ANIMATIONS:
+  - Page transitions: 200ms ease-in-out
+  - Modal/Sheet entrance: 300ms cubic-bezier
+  - Skeleton loading: pulse animation
+  - Pull-to-refresh: spring physics
+  - Add-to-cart: scale bounce (150ms)
+
+================================================================================
+8. CONTAINERIZATION & ORCHESTRATION
+================================================================================
+
+8.1 DOCKER CONFIGURATION
+--------------------------------------
+
+STANDARD DOCKERFILE (NestJS Microservice):
+
+# Stage 1: Build
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production && cp -R node_modules prod_node_modules
+RUN npm ci
+COPY . .
+RUN npm run build
+
+# Stage 2: Production
+FROM node:20-alpine AS production
+WORKDIR /app
+RUN addgroup -g 1001 -S appgroup && \
+    adduser -S appuser -u 1001 -G appgroup
+COPY --from=builder --chown=appuser:appgroup /app/prod_node_modules ./node_modules
+COPY --from=builder --chown=appuser:appgroup /app/dist ./dist
+COPY --from=builder --chown=appuser:appgroup /app/package.json ./
+USER appuser
+EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
+CMD ["node", "dist/main"]
+
+DOCKER-COMPOSE (Development):
+
+version: '3.8'
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_DB: daltaners
+      POSTGRES_USER: daltaners
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports: ["5432:5432"]
+    volumes: ["postgres_data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U daltaners"]
+      interval: 5s
+
+  cassandra:
+    image: cassandra:4.1
+    ports: ["9042:9042"]
+    volumes: ["cassandra_data:/var/lib/cassandra"]
+    environment:
+      CASSANDRA_CLUSTER_NAME: daltaners-cluster
+      CASSANDRA_NUM_TOKENS: 256
+    healthcheck:
+      test: ["CMD", "cqlsh", "-e", "describe keyspaces"]
+      interval: 10s
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    command: redis-server --appendonly yes --maxmemory 512mb
+             --maxmemory-policy allkeys-lru
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.0
+    environment:
+      discovery.type: single-node
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+      xpack.security.enabled: "false"
+    ports: ["9200:9200"]
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    depends_on: [zookeeper]
+    ports: ["9092:9092"]
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,
+                                   HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,
+                                              HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_NUM_PARTITIONS: 6
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    ports: ["2181:2181"]
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports: ["5672:5672", "15672:15672"]
+
+volumes:
+  postgres_data:
+  cassandra_data:
+
+8.2 KUBERNETES CLUSTER ARCHITECTURE
+--------------------------------------
+
+CLUSTER TOPOLOGY:
+  - Cloud Provider: AWS EKS (primary), with GKE as DR
+  - Nodes: 3 node pools
+    * System pool: 3 nodes (m5.large) - system services, monitoring
+    * Application pool: 6-20 nodes (m5.xlarge) - microservices (auto-scaling)
+    * Data pool: 3 nodes (r5.xlarge) - databases, caches (high memory)
+  - Multi-AZ: 3 availability zones minimum
+
+NAMESPACE STRATEGY:
+  - daltaners-system:       Ingress, cert-manager, ArgoCD
+  - daltaners-production:   All microservices (production)
+  - daltaners-staging:      Staging environment
+  - daltaners-data:         PostgreSQL, Cassandra, Redis, Elasticsearch
+  - daltaners-messaging:    Kafka, RabbitMQ
+  - daltaners-monitoring:   Prometheus, Grafana, Loki, Jaeger
+
+RESOURCE ALLOCATION (Per Microservice - Production):
+
+  Tier 1 - Critical (Order, Payment, Auth, Delivery):
+    Replicas: 3-10 (HPA)
+    CPU Request: 500m | CPU Limit: 2000m
+    Memory Request: 512Mi | Memory Limit: 2Gi
+    HPA Target: 70% CPU, 80% Memory
+
+  Tier 2 - Important (Catalog, Inventory, Search, Vendor):
+    Replicas: 2-8 (HPA)
+    CPU Request: 250m | CPU Limit: 1000m
+    Memory Request: 256Mi | Memory Limit: 1Gi
+    HPA Target: 70% CPU, 80% Memory
+
+  Tier 3 - Standard (Notification, Chat, Review, Loyalty, Promotion):
+    Replicas: 2-5 (HPA)
+    CPU Request: 100m | CPU Limit: 500m
+    Memory Request: 128Mi | Memory Limit: 512Mi
+    HPA Target: 75% CPU, 85% Memory
+
+KUBERNETES MANIFESTS (Example - Order Service):
+
+# deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+  namespace: daltaners-production
+  labels:
+    app: order-service
+    tier: critical
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: order-service
+  template:
+    metadata:
+      labels:
+        app: order-service
+        tier: critical
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3006"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: order-service-sa
+      containers:
+        - name: order-service
+          image: registry.daltaners.com/order-service:TAG
+          ports:
+            - containerPort: 3006
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: order-service-secrets
+                  key: database-url
+            - name: KAFKA_BROKERS
+              valueFrom:
+                configMapKeyRef:
+                  name: kafka-config
+                  key: brokers
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: 2000m
+              memory: 2Gi
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 3006
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 3006
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          startupProbe:
+            httpGet:
+              path: /health/startup
+              port: 3006
+            failureThreshold: 30
+            periodSeconds: 2
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+
+---
+# hpa.yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: order-service-hpa
+  namespace: daltaners-production
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: order-service
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 30
+      policies:
+        - type: Pods
+          value: 2
+          periodSeconds: 60
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 120
+
+---
+# service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-service
+  namespace: daltaners-production
+spec:
+  type: ClusterIP
+  selector:
+    app: order-service
+  ports:
+    - port: 80
+      targetPort: 3006
+      protocol: TCP
+
+---
+# pdb.yaml (Pod Disruption Budget)
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: order-service-pdb
+  namespace: daltaners-production
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: order-service
+
+INGRESS CONFIGURATION:
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: daltaners-api-ingress
+  namespace: daltaners-production
+  annotations:
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  tls:
+    - hosts: ["api.daltaners.com"]
+      secretName: daltaners-api-tls
+  rules:
+    - host: api.daltaners.com
+      http:
+        paths:
+          - path: /api/v1/auth
+            pathType: Prefix
+            backend:
+              service:
+                name: auth-service
+                port: { number: 80 }
+          - path: /api/v1/orders
+            pathType: Prefix
+            backend:
+              service:
+                name: order-service
+                port: { number: 80 }
+          - path: /api/v1/products
+            pathType: Prefix
+            backend:
+              service:
+                name: catalog-service
+                port: { number: 80 }
+          # ... additional service routes
+
+8.3 HELM CHARTS
+--------------------------------------
+
+CHART STRUCTURE:
+charts/
+  daltaners/                    # Umbrella chart
+    Chart.yaml
+    values.yaml
+    values-staging.yaml
+    values-production.yaml
+    charts/
+      auth-service/
+      user-service/
+      order-service/
+      ... (one sub-chart per microservice)
+    templates/
+      _helpers.tpl
+      namespace.yaml
+      configmap-shared.yaml
+      secret-shared.yaml
+
+8.4 CI/CD PIPELINE DESIGN
+--------------------------------------
+
+PIPELINE STAGES:
+
+1. CODE COMMIT (Developer pushes to feature branch)
+   -> Lint (ESLint, Prettier)
+   -> Type Check (TypeScript compiler)
+   -> Unit Tests (Jest)
+   -> Security Scan (Snyk, npm audit)
+
+2. PULL REQUEST (Merge to develop)
+   -> All Stage 1 checks
+   -> Integration Tests (Testcontainers)
+   -> Code Coverage (minimum 80%)
+   -> SonarQube analysis
+   -> Docker build (test)
+   -> E2E Tests (subset)
+   -> PR Review approval
+
+3. MERGE TO DEVELOP
+   -> Docker build + push to registry
+   -> Deploy to STAGING (ArgoCD auto-sync)
+   -> Full E2E test suite
+   -> Performance tests (k6)
+   -> Manual QA validation
+
+4. RELEASE (Tag + merge to main)
+   -> Docker build + push (production tag)
+   -> ArgoCD sync to PRODUCTION
+   -> Canary deployment (10% -> 50% -> 100%)
+   -> Smoke tests
+   -> Monitoring (15-min bake time)
+   -> Rollback if error rate > 1%
+
+================================================================================
+9. AI/ML ARCHITECTURE
+================================================================================
+
+9.1 ML PIPELINE DESIGN
+--------------------------------------
+
+DATA COLLECTION:
+  - Order history -> Kafka -> Data Lake (S3)
+  - User behavior events -> CassandraDB -> Spark -> Feature Store
+  - Product catalog -> PostgreSQL CDC -> Feature Store
+  - Delivery metrics -> TimescaleDB -> Feature Store
+
+MODEL TRAINING PIPELINE (Kubeflow):
+  1. Data Extraction (Spark job from S3/Cassandra)
+  2. Feature Engineering (Pandas/Spark)
+  3. Model Training (TensorFlow/PyTorch)
+  4. Model Evaluation (automated metrics)
+  5. Model Registry (MLflow)
+  6. A/B Testing assignment
+  7. Production deployment (canary)
+
+KEY MODELS:
+
+MODEL 1: Product Recommendation Engine
+  Type: Collaborative Filtering + Content-Based Hybrid
+  Input: User purchase history, browsing behavior, product features
+  Output: Ranked product recommendations (top-N)
+  Training: Daily retraining on full dataset
+  Serving: Pre-computed recommendations cached in Redis + real-time 
+           scoring for session-based
+
+MODEL 2: Demand Forecasting
+  Type: Time-series forecasting (Prophet/LSTM)
+  Input: Historical sales, weather, events, promotions, day-of-week
+  Output: Predicted demand per product per zone per time window
+  Training: Weekly retraining
+  Serving: Batch predictions stored in PostgreSQL, API for vendor alerts
+
+MODEL 3: Delivery ETA Prediction
+  Type: Gradient Boosted Trees (XGBoost/LightGBM)
+  Input: Distance, time of day, traffic data, store prep time, rider 
+         performance, weather
+  Output: Estimated delivery time in minutes
+  Training: Daily retraining
+  Serving: Real-time inference via TensorFlow Serving (<50ms latency)
+
+MODEL 4: Fraud Detection
+  Type: Anomaly Detection (Isolation Forest + Neural Network)
+  Input: Order patterns, payment behavior, device fingerprint, velocity
+  Output: Fraud risk score (0-100)
+  Training: Weekly retraining with manual labels
+  Serving: Real-time scoring on order placement
+
+MODEL 5: Dynamic Pricing / Surge
+  Type: Reinforcement Learning
+  Input: Current demand, supply (available riders), zone, time, weather
+  Output: Delivery fee multiplier
+  Training: Continuous learning
+  Serving: Real-time pricing API
+
+MODEL 6: Search Ranking
+  Type: Learning-to-Rank (LambdaMART)
+  Input: Query relevance, user preference, product popularity, 
+         conversion history
+  Output: Re-ranked search results
+  Training: Weekly retraining with click-through data
+  Serving: Real-time re-ranking applied to Elasticsearch results
+
+================================================================================
+10. REAL-TIME SYSTEMS
+================================================================================
+
+10.1 WEBSOCKET ARCHITECTURE
+--------------------------------------
+
+IMPLEMENTATION: Socket.IO with Redis adapter for horizontal scaling
+
+SOCKET NAMESPACES:
+  /tracking     - Delivery GPS tracking
+  /orders       - Order status updates
+  /chat         - In-app messaging
+  /notifications - Real-time notifications
+  /admin        - Admin dashboard live data
+
+CONNECTION MANAGEMENT:
+  - Authentication: JWT token passed during handshake
+  - Rooms: order:{order_id}, store:{store_id}, zone:{zone_id},
+           user:{user_id}, delivery:{delivery_id}
+  - Heartbeat: 25 seconds
+  - Reconnection: Exponential backoff (1s, 2s, 4s, ... max 30s)
+
+REDIS ADAPTER:
+  - Enables WebSocket messages across multiple Socket.IO server instances
+  - Redis Pub/Sub for cross-instance communication
+
+10.2 GPS TRACKING SYSTEM
+--------------------------------------
+
+DATA FLOW:
+  Delivery App -> Socket.IO (/tracking) -> Delivery Service 
+  -> Redis (GEO data) + CassandraDB (history) + Kafka (event)
+  -> Customer App (real-time map update)
+
+UPDATE FREQUENCY:
+  - Active delivery: Every 5 seconds
+  - Idle (online): Every 30 seconds
+  - Background: Every 60 seconds
+
+GEOSPATIAL QUERIES (Redis):
+  - GEOADD: Update rider position
+  - GEOSEARCH: Find nearest available riders within radius
+  - GEODIST: Calculate distance between rider and destination
+
+10.3 PUSH NOTIFICATION SYSTEM
+--------------------------------------
+
+PROVIDERS:
+  - Firebase Cloud Messaging (FCM) for Android
+  - Apple Push Notification Service (APNs) for iOS
+  - Web Push (service workers) for web browsers
+
+NOTIFICATION PRIORITY:
+  Critical: Order confirmation, delivery arrival, payment 
+            (FCM priority: high)
+  Standard: Promotions, status updates (FCM priority: normal)
+  Low: Tips, suggestions, weekly summaries (batched)
+
+================================================================================
+11. PAYMENT SYSTEM ARCHITECTURE
+================================================================================
+
+PAYMENT FLOW (Order):
+1. Customer places order
+2. Order Service creates order (status: pending_payment)
+3. Payment Service creates payment intent:
+   - Card: Stripe PaymentIntent (authorize + capture split)
+   - GCash/Maya: Redirect to e-wallet checkout
+   - COD: No immediate charge, flag for cash collection
+   - Wallet: Direct debit from Daltaners Wallet
+4. Payment confirmation -> Order confirmed
+5. On delivery completion:
+   - Card: Capture authorized amount (or adjusted for substitutions)
+   - COD: Rider confirms cash collection
+6. Settlement cycle:
+   - Calculate vendor commission
+   - Calculate delivery partner earnings
+   - Process payouts
+
+IDEMPOTENCY:
+  - Every payment request includes unique idempotency_key
+  - Prevents duplicate charges on retry
+  - Keys stored in Redis with 24-hour TTL
+
+RECONCILIATION:
+  - Daily automated reconciliation
+  - Match platform records with gateway records
+  - Flag discrepancies for manual review
+  - Weekly settlement cycle for vendors
+
+================================================================================
+12. SEARCH ARCHITECTURE
+================================================================================
+
+SEARCH PIPELINE:
+  1. User types query in search bar
+  2. Auto-complete: Redis cache (popular queries) + Elasticsearch 
+     prefix query
+  3. Full search: 
+     a. Query parsing and normalization
+     b. Filipino/English synonym expansion
+     c. Elasticsearch multi-match query (product name, description, 
+        brand, category)
+     d. Geo-filtering (only products from stores in user zone)
+     e. Availability filtering (in-stock only)
+     f. ML re-ranking (personalized relevance)
+     g. Facet aggregation (category, brand, price range, dietary)
+  4. Results returned with facets, did-you-mean suggestions
+
+INDEXING PIPELINE:
+  PostgreSQL (catalog) -> Debezium CDC -> Kafka (daltaners.search.indexing)
+  -> Kafka Connect Elasticsearch Sink -> Elasticsearch
+
+SEARCH LIST FEATURE:
+  - User pastes/types multiple items (one per line)
+  - System runs parallel search for each item
+  - Returns best matches across stores
+  - Optimizes for single-store fulfillment when possible
+
+================================================================================
+13. SECURITY ARCHITECTURE
+================================================================================
+
+DEFENSE IN DEPTH:
+
+Layer 1: Network Security
+  - CloudFlare WAF + DDoS protection
+  - VPC with private subnets for data layer
+  - Network policies in Kubernetes
+  - TLS 1.3 everywhere
+
+Layer 2: API Security
+  - JWT authentication (short-lived tokens)
+  - API rate limiting (per-user, per-endpoint)
+  - Input validation (class-validator on all DTOs)
+  - SQL injection prevention (TypeORM parameterized queries)
+  - XSS prevention (input sanitization)
+  - CORS policy (whitelist approved origins)
+
+Layer 3: Application Security
+  - RBAC with fine-grained permissions
+  - OWASP dependency check in CI/CD
+  - Container image scanning (Trivy)
+  - Secret management (Vault/K8s secrets)
+  - Audit logging for all sensitive operations
+
+Layer 4: Data Security
+  - Encryption at rest (AES-256)
+  - Encryption in transit (TLS 1.3)
+  - PII tokenization
+  - Database-level access controls
+  - Backup encryption
+  - Data retention enforcement
+
+COMPLIANCE FRAMEWORK:
+  - PCI-DSS Level 1 (payment data)
+  - Philippine Data Privacy Act (RA 10173)
+  - SOC 2 Type II (target year 2)
+
+================================================================================
+14. MONITORING & OBSERVABILITY
+================================================================================
+
+THREE PILLARS:
+
+1. METRICS (Prometheus + Grafana):
+  - Infrastructure: CPU, memory, disk, network per pod/node
+  - Application: Request rate, error rate, latency (RED metrics)
+  - Business: Orders/min, GMV, active users, delivery times
+  - Custom: Stock levels, payment success rate, search latency
+  
+  KEY DASHBOARDS:
+  - Platform Health Overview
+  - Order Pipeline (real-time flow)
+  - Delivery Operations
+  - Payment Processing
+  - Per-Service Performance
+  - Database Performance
+  - Kafka Lag Monitoring
+
+2. LOGGING (ELK Stack or Grafana Loki):
+  - Structured JSON logging from all services
+  - Correlation IDs for request tracing
+  - Log levels: ERROR, WARN, INFO, DEBUG
+  - Centralized log aggregation
+  - Log-based alerting for errors
+  - Log retention: 90 days hot, 1 year cold (S3)
+
+3. TRACING (Jaeger with OpenTelemetry):
+  - Distributed tracing across microservices
+  - Request waterfall visualization
+  - Latency breakdown per service hop
+  - Error attribution to specific service
+  - Sampling: 1% in production, 100% in staging
+
+ALERTING RULES:
+  Critical (PagerDuty):
+    - Error rate > 5% for any service (5 min window)
+    - Payment service down
+    - P99 latency > 5 seconds
+    - Database connection failures
+    - Kafka consumer lag > 10,000
+    
+  Warning (Slack):
+    - Error rate > 1%
+    - P95 latency > 2 seconds
+    - Disk usage > 80%
+    - Memory usage > 85%
+    - Pod restart count > 3 in 1 hour
+
+================================================================================
+15. DISASTER RECOVERY & BUSINESS CONTINUITY
+================================================================================
+
+DR STRATEGY: Warm Standby
+
+RTO: 4 hours | RPO: 1 hour
+
+PRIMARY REGION: AWS ap-southeast-1 (Singapore) - closest to Philippines
+DR REGION: AWS ap-southeast-3 (Jakarta)
+
+BACKUP STRATEGY:
+  - PostgreSQL: Continuous WAL archiving to S3 + daily snapshots
+  - CassandraDB: Cross-datacenter replication (active-active)
+  - Redis: Redis persistence (AOF) + periodic RDB snapshots
+  - Elasticsearch: Daily snapshot to S3
+  - File storage: S3 cross-region replication
+
+FAILOVER PROCEDURE:
+  1. Detect failure (automated health checks)
+  2. DNS failover (Route 53 health-based routing)
+  3. Promote DR database replicas
+  4. Verify data consistency
+  5. Switch traffic to DR region
+  6. Notify operations team
+
+================================================================================
+16. PERFORMANCE ENGINEERING
+================================================================================
+
+CACHING STRATEGY SUMMARY:
+  - Browser: Static assets (1 year), API responses (no-cache with ETag)
+  - CDN: Images, JS, CSS bundles (1 year with hash busting)
+  - Redis L1: Hot data (products, prices, stock levels) - 60-300s TTL
+  - Redis L2: Computed data (recommendations, trending) - 300-3600s TTL
+  - Application: In-memory LRU for configuration - 300s TTL
+
+DATABASE OPTIMIZATION:
+  - PostgreSQL: Connection pooling (PgBouncer), read replicas, 
+    partitioning (orders by month), proper indexing (EXPLAIN ANALYZE)
+  - CassandraDB: Proper partition key design, TTL for data expiry,
+    compaction strategy per table
+  - Elasticsearch: Shard allocation awareness, force merge for read-only
+    indices
+
+LOAD TESTING TARGETS (k6):
+  - Concurrent users: 100,000
+  - Throughput: 10,000 RPS
+  - P95 latency: < 500ms
+  - Error rate: < 0.1%
+  - Soak test: 8 hours sustained load
+
+================================================================================
+17. DATA PIPELINE ARCHITECTURE
+================================================================================
+
+REAL-TIME PIPELINE:
+  Source -> Kafka -> Stream Processing (Kafka Streams) -> Sink
+  
+  Sources: Microservice events, GPS tracking, user behavior
+  Processing: Aggregation, enrichment, filtering
+  Sinks: CassandraDB, Elasticsearch, Redis, TimescaleDB
+
+BATCH PIPELINE:
+  S3 Data Lake -> Apache Spark -> Data Warehouse -> BI Tools
+
+  ETL Jobs:
+  - Daily: Order aggregation, vendor settlement calculation
+  - Weekly: ML model retraining, user segmentation
+  - Monthly: Financial reporting, compliance reports
+
+================================================================================
+18. DEVOPS & INFRASTRUCTURE AS CODE
+================================================================================
+
+TERRAFORM MODULES:
+
+modules/
+  networking/         # VPC, subnets, security groups
+  eks/                # EKS cluster, node groups
+  rds/                # PostgreSQL instances
+  elasticache/        # Redis cluster
+  elasticsearch/      # Elasticsearch/OpenSearch domain
+  kafka/              # MSK (Managed Streaming for Kafka)
+  s3/                 # S3 buckets (storage, backups, data lake)
+  cloudfront/         # CDN distribution
+  route53/            # DNS management
+  iam/                # IAM roles and policies
+  monitoring/         # CloudWatch, Prometheus setup
+  vault/              # HashiCorp Vault cluster
+
+ENVIRONMENTS:
+  - Development: Minimal resources, shared services, local Docker Compose
+  - Staging: Mirror of production (reduced scale)
+  - Production: Full-scale, multi-AZ, auto-scaling
+
+================================================================================
+19. TESTING STRATEGY
+================================================================================
+
+TEST PYRAMID:
+
+UNIT TESTS (70% of test effort):
+  - Service method tests
+  - Utility function tests
+  - Guard/pipe/interceptor tests
+  - Coverage target: 80%+
+
+INTEGRATION TESTS (20% of test effort):
+  - Database interaction tests (Testcontainers)
+  - Kafka producer/consumer tests
+  - Redis cache tests
+  - External API mock tests
+
+E2E TESTS (10% of test effort):
+  - Critical user flows:
+    * Customer: Register -> Browse -> Add to Cart -> Checkout -> Track
+    * Vendor: Login -> Add Product -> Accept Order -> Mark Ready
+    * Delivery: Login -> Accept Order -> Navigate -> Deliver
+  - Payment flow tests
+  - Admin operations
+
+PERFORMANCE TESTS:
+  Tool: k6
+  - Load test: Gradual ramp to 10,000 concurrent users
+  - Stress test: Push beyond expected capacity
+  - Soak test: 8-hour sustained load
+  - Spike test: Sudden 10x traffic increase
+
+SECURITY TESTS:
+  - OWASP ZAP automated scanning (weekly)
+  - Penetration testing (quarterly, external firm)
+  - Dependency vulnerability scanning (every build)
+
+================================================================================
+20. DEPLOYMENT STRATEGY
+================================================================================
+
+DEPLOYMENT PATTERNS:
+
+CANARY DEPLOYMENT (Default for all services):
+  1. Deploy new version to 10% of pods
+  2. Monitor error rate and latency for 5 minutes
+  3. If healthy: Expand to 50%
+  4. Monitor for 10 minutes
+  5. If healthy: Expand to 100%
+  6. If unhealthy at any stage: Automatic rollback
+
+BLUE-GREEN DEPLOYMENT (For database migrations):
+  1. Deploy new version alongside current (blue)
+  2. Run database migration
+  3. Switch traffic from blue to green
+  4. Monitor for 30 minutes
+  5. Decommission blue if healthy
+
+FEATURE FLAGS (LaunchDarkly / Unleash):
+  - New features behind flags
+  - Gradual rollout by percentage
+  - Instant kill switch for problematic features
+  - A/B testing via feature variants
+
+RELEASE CADENCE:
+  - Microservices: Continuous deployment (multiple per day)
+  - Mobile apps: Bi-weekly release cycle
+  - Database migrations: Weekly maintenance window (Sunday 2-4 AM PHT)
+  - Infrastructure changes: Monthly with change advisory board approval
+
+================================================================================
+APPENDIX: INFRASTRUCTURE COST ESTIMATION (Monthly - Production)
+================================================================================
+
+| Component                    | Specification              | Est. Cost   |
+|------------------------------|----------------------------|-------------|
+| EKS Cluster                  | 1 cluster, 3 AZs          | $73         |
+| EC2 (System nodes)           | 3x m5.large                | $210        |
+| EC2 (App nodes)              | 8x m5.xlarge (avg)         | $1,230      |
+| EC2 (Data nodes)             | 3x r5.xlarge               | $760        |
+| RDS PostgreSQL               | db.r5.xlarge, Multi-AZ     | $850        |
+| ElastiCache Redis            | cache.r5.large, 3 nodes    | $470        |
+| MSK (Kafka)                  | kafka.m5.large, 3 brokers  | $650        |
+| OpenSearch (Elasticsearch)   | r5.large.search, 3 nodes   | $550        |
+| Cassandra (EC2-based)        | 6x i3.xlarge               | $2,700      |
+| S3 Storage                   | ~5TB                       | $115        |
+| CloudFront CDN               | ~10TB transfer             | $850        |
+| Route 53                     | DNS + health checks        | $50         |
+| Load Balancers               | 2x ALB                     | $50         |
+| Data Transfer                | ~20TB outbound             | $1,800      |
+| Monitoring (Datadog/etc.)    | Infrastructure + APM       | $500        |
+| Misc (Vault, CI/CD, etc.)   |                            | $300        |
+|------------------------------|----------------------------|-------------|
+| ESTIMATED TOTAL              |                            | ~$11,200/mo |
+
+Note: Costs will scale with traffic. Consider reserved instances for 
+40-60% savings on base infrastructure.
+
+================================================================================
+END OF PRODUCT DESIGN DOCUMENT
+================================================================================

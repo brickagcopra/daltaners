@@ -1,0 +1,1406 @@
+================================================================================
+DALTANERS - PRODUCT REQUIREMENTS DOCUMENT (PRD)
+Filipino Online-to-Offline (O2O) E-Commerce & Groceries Platform
+Version 2.0 | February 2026
+================================================================================
+
+TABLE OF CONTENTS
+================================================================================
+1.  Executive Summary
+2.  Product Vision & Mission
+3.  Market Analysis & Competitive Landscape
+4.  Target Users & Personas
+5.  Business Model & Revenue Streams
+6.  Platform Overview & Service Types
+7.  Core Feature Requirements
+    7.1   Multi-Store/Multi-Vendor System
+    7.2   Customer Mobile App (React Native - Android & iOS)
+    7.3   Vendor/Merchant Mobile App & Dashboard
+    7.4   Delivery Personnel Mobile App
+    7.5   Admin Super Panel (Web)
+    7.6   Order Management System
+    7.7   Delivery & Logistics Engine
+    7.8   Payment & Financial System
+    7.9   Promotions & Marketing Engine
+    7.10  POS System (In-Store)
+    7.11  Messaging & Communication System
+    7.12  AI-Powered Inventory Management
+    7.13  Search & Discovery Engine
+    7.14  Rating & Review System
+    7.15  Loyalty & Rewards Program
+    7.16  Car Rental Module
+    7.17  WhatsApp Integration
+    7.18  Analytics & Reporting Dashboard
+8.  Additional Features (Research-Based)
+    8.1   Dark Store / Micro-Fulfillment Support
+    8.2   Multi-Language & Localization (Filipino/Tagalog, English, Cebuano)
+    8.3   Subscription & Auto-Replenishment
+    8.4   Social Commerce Integration
+    8.5   Voice-Enabled Ordering
+    8.6   Dynamic Pricing & Surge Management
+    8.7   Carbon Footprint Tracker
+    8.8   Vendor Onboarding Automation
+    8.9   Fraud Detection & Prevention
+    8.10  Accessibility (WCAG 2.1 Compliance)
+    8.11  Offline Mode Support
+    8.12  Smart Shopping Lists & Meal Planning
+    8.13  B2B/Wholesale Ordering Module
+    8.14  Dispute Resolution & Arbitration Center
+    8.15  Driver Safety & Insurance Module
+9.  Non-Functional Requirements
+    9.1   Performance Requirements
+    9.2   Scalability Requirements
+    9.3   Security Requirements
+    9.4   Reliability & Availability
+    9.5   Compliance & Regulatory
+10. User Experience Requirements
+11. Integration Requirements
+12. Data Requirements & Analytics
+13. Operational Requirements
+14. Release Strategy & Phasing
+15. Success Metrics & KPIs
+16. Risk Assessment & Mitigation
+17. Appendices
+
+================================================================================
+1. EXECUTIVE SUMMARY
+================================================================================
+
+Daltaners is a Filipino online-to-offline (O2O) e-commerce and groceries platform 
+designed to connect local stores (sari-sari stores, Kirana-equivalent partners, 
+supermarkets, pharmacies, restaurants, and specialty retailers) with consumers 
+across the Philippines. Inspired by the architecture and operational excellence 
+of Amazon Fresh and Carrefour Marketplace, Daltaners leverages a hyperlocal, 
+data-driven approach to optimize supply chain logistics, minimize delivery times, 
+and provide a seamless multi-vendor marketplace experience.
+
+The platform supports multiple service verticals including grocery delivery, 
+food delivery, pharmacy delivery, parcel delivery, and car rental services. 
+Daltaners differentiates itself through AI-powered inventory management, WhatsApp 
+integration for orders, zone-wise delivery management, and a robust POS system 
+for physical store operations.
+
+Target Market: Philippines (initial), with expansion roadmap to Southeast Asia.
+Expected Daily Transactions: 1,000,000+ at scale.
+Delivery Promise: Express delivery within 2-4 hours; standard within 24 hours.
+
+================================================================================
+2. PRODUCT VISION & MISSION
+================================================================================
+
+VISION:
+To become the Philippines' most trusted and efficient hyperlocal commerce 
+platform, empowering every local store to compete in the digital economy while 
+providing Filipino consumers with fast, affordable, and convenient access to 
+everything they need.
+
+MISSION:
+- Bridge the gap between local brick-and-mortar stores and digital consumers
+- Democratize e-commerce by enabling small merchants (sari-sari stores, local 
+  markets) to reach customers beyond their physical footprint
+- Deliver unmatched convenience through AI-optimized logistics and hyperlocal 
+  fulfillment
+- Build a sustainable ecosystem that benefits merchants, delivery partners, and 
+  consumers equally
+
+CORE VALUES:
+- Speed: Minimize time from order to delivery
+- Accessibility: Every Filipino, regardless of location, can access the platform
+- Trust: Transparent pricing, no-questions-asked returns, secure payments
+- Empowerment: Enable local businesses to thrive digitally
+- Innovation: Continuously improve through AI, data, and technology
+
+================================================================================
+3. MARKET ANALYSIS & COMPETITIVE LANDSCAPE
+================================================================================
+
+3.1 PHILIPPINE E-COMMERCE LANDSCAPE
+--------------------------------------
+- Philippine e-commerce market projected at $24B+ by 2027
+- Internet penetration: 73%+ with 85M+ internet users
+- Mobile-first market: 98% of internet users access via mobile
+- Key competitors: Lazada, Shopee, GrabMart, MetroMart, LazMart
+- Underserved segments: Rural/suburban hyperlocal delivery, sari-sari store 
+  digitization, multi-service platform consolidation
+
+3.2 COMPETITIVE ANALYSIS
+--------------------------------------
+| Competitor     | Strengths              | Daltaners Differentiator         |
+|----------------|------------------------|--------------------------------|
+| Amazon Fresh   | Massive scale, Prime   | Hyperlocal Filipino focus,     |
+|                | integration, AI        | sari-sari store integration    |
+| Carrefour      | Multi-vendor, wide     | O2O model, WhatsApp ordering,  |
+| Marketplace    | catalog, EU compliance | Filipino payment methods       |
+| GrabMart       | Existing user base,    | Dedicated grocery/multi-vendor |
+|                | super app ecosystem    | POS integration, car rental    |
+| MetroMart      | Filipino market fit    | AI inventory, broader service  |
+|                |                        | types, vendor POS system       |
+| Shopee/Lazada  | Scale, marketing       | Hyperlocal focus, express      |
+|                | budget                 | delivery, local store network  |
+
+3.3 UNIQUE VALUE PROPOSITION
+--------------------------------------
+1. O2O Bridge: True online-to-offline integration with physical store POS
+2. Hyperlocal Network: Leveraging existing sari-sari stores and local partners
+3. Multi-Service Platform: Grocery + Food + Pharmacy + Parcel + Car Rental
+4. AI-Powered Operations: Demand prediction, inventory optimization, smart routing
+5. Filipino-First Design: Localized UX, local payment methods, local language
+6. WhatsApp Commerce: Order via WhatsApp for tech-limited consumers
+
+================================================================================
+4. TARGET USERS & PERSONAS
+================================================================================
+
+4.1 CUSTOMER PERSONAS
+--------------------------------------
+PERSONA 1: "Maria" - Urban Professional
+- Age: 25-35, Metro Manila
+- Needs: Quick grocery delivery after work, meal kits
+- Behavior: Uses mobile apps daily, price-conscious but values convenience
+- Pain Points: Traffic makes physical shopping time-consuming
+
+PERSONA 2: "Juan" - Suburban Family Head
+- Age: 35-50, Provincial City
+- Needs: Weekly bulk grocery orders, household essentials
+- Behavior: Price-sensitive, compares across stores, loyal to trusted brands
+- Pain Points: Limited access to variety stores, delivery options
+
+PERSONA 3: "Ana" - Senior Citizen
+- Age: 60+, Mixed urban/rural
+- Needs: Pharmacy delivery, basic groceries, easy ordering
+- Behavior: Limited tech literacy, trusts WhatsApp/SMS communication
+- Pain Points: Mobility issues, complex app interfaces
+
+PERSONA 4: "Carlo" - Small Business Owner
+- Age: 30-45, Urban
+- Needs: B2B bulk ordering, restaurant supplies
+- Behavior: Regular recurring orders, invoice-based payment
+- Pain Points: Inconsistent supply, no bulk discount platform
+
+4.2 MERCHANT PERSONAS
+--------------------------------------
+PERSONA 5: "Aling Nena" - Sari-Sari Store Owner
+- Business: Small neighborhood store with 200-500 SKUs
+- Needs: Digital presence, order management, inventory tracking
+- Tech Level: Basic smartphone, limited tech literacy
+- Pain Points: Manual inventory, no delivery capability
+
+PERSONA 6: "Mr. Reyes" - Supermarket Chain Manager
+- Business: Multi-branch supermarket with 10,000+ SKUs
+- Needs: Integration with existing POS, bulk order management
+- Tech Level: Advanced, existing ERP systems
+- Pain Points: Last-mile delivery efficiency, online channel management
+
+PERSONA 7: "Doc Santos" - Pharmacy Owner
+- Business: Licensed pharmacy with regulated products
+- Needs: Prescription verification workflow, regulated inventory
+- Tech Level: Moderate
+- Pain Points: Regulatory compliance for online orders
+
+4.3 DELIVERY PERSONNEL PERSONAS
+--------------------------------------
+PERSONA 8: "Kuya Mike" - Full-Time Delivery Rider
+- Vehicle: Motorcycle
+- Needs: Steady income, clear route guidance, earnings transparency
+- Pain Points: Unpredictable demand, vehicle maintenance costs
+
+PERSONA 9: "Ate Joy" - Part-Time Delivery Walker
+- Vehicle: Bicycle/Walking
+- Needs: Flexible schedule, nearby deliveries
+- Pain Points: Weather exposure, limited earning potential
+
+================================================================================
+5. BUSINESS MODEL & REVENUE STREAMS
+================================================================================
+
+5.1 REVENUE STREAMS
+--------------------------------------
+1. Commission per Transaction: 10-25% commission on each order (varies by 
+   category: groceries 10-15%, food 20-25%, electronics 8-12%)
+2. Delivery Fees: Charged to customer based on distance/zone
+3. Vendor Subscription Plans:
+   - Free Tier: Basic listing, 20% commission
+   - Silver: Enhanced visibility, 15% commission, ₱999/month
+   - Gold: Priority placement, 12% commission, analytics, ₱2,499/month
+   - Platinum: Full features, 10% commission, dedicated support, ₱4,999/month
+4. Advertising Revenue:
+   - Sponsored listings
+   - Banner ads on customer app
+   - Featured store placement
+5. POS License Fee: Monthly fee for in-store POS hardware/software
+6. Car Rental Commission: 15-20% per rental transaction
+7. Premium Features:
+   - Priority delivery for customers (subscription)
+   - Advanced analytics for merchants
+   - API access for enterprise integrations
+8. Financial Services (Future):
+   - Merchant lending
+   - Customer BNPL (Buy Now Pay Later)
+   - Digital wallet float
+
+5.2 PRICING STRATEGY
+--------------------------------------
+DELIVERY PRICING:
+- Free delivery: Orders above ₱500 minimum order value
+- Standard delivery (below minimum): ₱49-99 based on distance/zone
+- Express delivery (2-4 hours): ₱99-149
+- Scheduled delivery: ₱39-79
+
+ORDER MINIMUMS:
+- Grocery: ₱200 minimum order
+- Food: ₱150 minimum order
+- Pharmacy: No minimum
+- Parcel: Per-item pricing
+
+================================================================================
+6. PLATFORM OVERVIEW & SERVICE TYPES
+================================================================================
+
+6.1 SERVICE VERTICALS
+--------------------------------------
+1. GROCERY DELIVERY
+   - Fresh produce, staples, packaged goods, beverages
+   - Weight-based and unit-based products
+   - Temperature-controlled categories (frozen, chilled, ambient)
+   - Substitution preferences for out-of-stock items
+
+2. FOOD DELIVERY
+   - Restaurant orders, cloud kitchens, home cooks
+   - Real-time preparation tracking
+   - Estimated preparation + delivery time
+   - Special instructions and dietary preferences
+
+3. PHARMACY DELIVERY
+   - OTC medications and health products
+   - Prescription upload and verification workflow
+   - Licensed pharmacy verification
+   - Regulatory compliance (FDA Philippines)
+
+4. PARCEL/COURIER DELIVERY
+   - Point-to-point delivery
+   - Package size/weight categories
+   - Cash on delivery support
+   - Fragile/special handling options
+
+5. CAR RENTAL MODULE
+   - Vehicle listing by rental companies
+   - Hourly, daily, weekly rental options
+   - Insurance integration
+   - Pickup/dropoff scheduling
+   - Driver option (with driver / self-drive)
+
+6.2 PLATFORM COMPONENTS
+--------------------------------------
+1. Customer Mobile App (React Native - Android & iOS)
+2. Customer Web App (React + Tailwind CSS + Shadcn UI)
+3. Vendor/Merchant Mobile App (React Native)
+4. Vendor Web Dashboard (React)
+5. Delivery Personnel Mobile App (React Native)
+6. Admin Super Panel (React Web Application)
+7. POS Terminal Application (React + Electron for desktop)
+8. WhatsApp Bot Integration
+9. API Gateway (Public APIs for third-party integrations)
+
+================================================================================
+7. CORE FEATURE REQUIREMENTS
+================================================================================
+
+7.1 MULTI-STORE/MULTI-VENDOR SYSTEM
+--------------------------------------
+REQ-MV-001: Platform shall support unlimited vendor/store registrations
+REQ-MV-002: Each vendor shall have an isolated administration panel
+REQ-MV-003: Vendors shall manage their own:
+  - Product catalog (CRUD operations)
+  - Pricing and discounts
+  - Inventory levels (manual + automated)
+  - Store hours and availability
+  - Delivery zones and fees
+  - Staff accounts and permissions
+REQ-MV-004: Platform shall support vendor categorization:
+  - Grocery stores / Supermarkets
+  - Restaurants / Food outlets
+  - Pharmacies
+  - Electronics retailers
+  - Fashion/apparel stores
+  - General merchandise
+  - Specialty stores
+REQ-MV-005: Vendor onboarding workflow:
+  - Application submission with business documents
+  - KYC verification (business permit, DTI/SEC registration)
+  - Admin review and approval/rejection
+  - Store setup wizard (products, zones, pricing)
+  - Training materials and onboarding guide
+REQ-MV-006: Vendor performance monitoring:
+  - Order fulfillment rate
+  - Average preparation time
+  - Customer rating
+  - Return/refund rate
+  - Response time to customer inquiries
+REQ-MV-007: Vendor suspension/termination for policy violations
+REQ-MV-008: Multi-branch support for chain stores (single vendor, multiple 
+             locations)
+REQ-MV-009: Product SKU deduplication across vendors for price comparison
+REQ-MV-010: Vendor commission tracking and automated settlement
+
+7.2 CUSTOMER MOBILE APP (React Native - Android & iOS)
+--------------------------------------
+REQ-CA-001: User registration/login:
+  - Email/password
+  - Phone number with OTP
+  - Social login (Google, Facebook, Apple)
+  - Guest checkout option
+REQ-CA-002: Home screen features:
+  - Location-based store discovery
+  - Category browsing (groceries, food, pharmacy, etc.)
+  - Personalized recommendations (AI-powered)
+  - Active promotions and deals banner carousel
+  - Recently ordered items quick-reorder
+  - "Near You" store listings
+REQ-CA-003: Store browsing:
+  - Store profile with ratings, hours, delivery info
+  - Product catalog with categories/subcategories
+  - Product detail page (images, description, nutrition, reviews)
+  - Search within store
+  - Sort/filter (price, rating, dietary, brand)
+REQ-CA-004: Search & Discovery:
+  - Global search across all stores and products
+  - Auto-complete and suggestions
+  - Voice search capability
+  - Barcode/QR code scanner for product lookup
+  - "Most Searched" trending panel
+  - Search history and saved searches
+  - Search list feature (add multiple items at once)
+REQ-CA-005: Shopping Cart:
+  - Multi-store cart (separate carts per store OR unified)
+  - Quantity adjustment
+  - Substitution preferences (accept similar, specific alternative, refund)
+  - Special instructions per item
+  - Estimated total with delivery fee breakdown
+  - Save cart for later
+  - Share cart with other users
+REQ-CA-006: Checkout & Payment:
+  - Address management (multiple saved addresses)
+  - Delivery scheduling (ASAP, scheduled time slot)
+  - Delivery type selection (standard, express)
+  - Payment method selection:
+    * Credit/Debit card (Stripe)
+    * GCash integration
+    * Maya/PayMaya
+    * GrabPay
+    * Bank transfer
+    * Cash on delivery
+    * Digital wallet (Daltaners Wallet)
+  - Promo code / coupon application
+  - Order summary review
+  - Tip for delivery personnel
+REQ-CA-007: Order Tracking:
+  - Real-time GPS tracking of delivery personnel
+  - Order status updates (confirmed, preparing, picked up, on the way, 
+    delivered)
+  - Push notifications at each status change
+  - In-app calling/messaging to delivery personnel
+  - Estimated time of arrival (ETA) with dynamic updates
+  - Live map view with delivery route
+REQ-CA-008: Order History & Management:
+  - Complete order history with details
+  - Reorder from previous orders (one-tap)
+  - Order cancellation (with time window)
+  - Return/refund request
+  - Digital receipt
+REQ-CA-009: User Profile:
+  - Personal information management
+  - Address book
+  - Payment methods management
+  - Notification preferences
+  - Language settings (English, Filipino, Cebuano)
+  - Dietary preferences and allergen alerts
+  - Order preferences (default substitution policy)
+REQ-CA-010: Loyalty & Rewards:
+  - Points earned per order
+  - Points redemption for discounts
+  - Tier-based membership (Bronze, Silver, Gold, Platinum)
+  - Exclusive member-only deals
+  - Birthday rewards
+  - Refer-a-friend program
+REQ-CA-011: Customer Support:
+  - In-app chat with support agents
+  - FAQ and self-help center
+  - Issue reporting per order
+  - Rating and review submission for stores and products
+
+7.3 VENDOR/MERCHANT MOBILE APP & DASHBOARD
+--------------------------------------
+REQ-VM-001: Vendor registration and onboarding:
+  - Business information and document upload
+  - Store profile setup (logo, banner, description, hours)
+  - Product catalog import (CSV, manual entry, barcode scan)
+  - Delivery zone configuration on map
+REQ-VM-002: Order Management:
+  - Real-time order notification (sound + push)
+  - Accept/reject incoming orders
+  - Order preparation status updates
+  - Item substitution approval workflow
+  - Order history and analytics
+  - Batch order processing
+REQ-VM-003: Product Management:
+  - Add/edit/delete products
+  - Bulk product upload via CSV
+  - Product image gallery (multiple images per product)
+  - Product variants (size, color, weight options)
+  - Stock quantity management
+  - Low stock alerts and auto-disable out-of-stock
+  - Product categorization and tagging
+  - Barcode/SKU management
+  - Price scheduling (promotional prices with date range)
+REQ-VM-004: Inventory Management:
+  - Real-time stock levels dashboard
+  - Stock adjustment (manual and automated)
+  - AI-powered demand forecasting alerts
+  - Restock recommendations
+  - Inventory audit logs
+  - Batch/expiry date tracking (for perishables)
+  - Multi-location inventory sync (for chain stores)
+REQ-VM-005: Financial Dashboard:
+  - Daily/weekly/monthly sales summary
+  - Commission deductions visibility
+  - Pending and completed settlements
+  - Tax report generation
+  - Invoice management
+  - Payout schedule and history
+REQ-VM-006: Marketing Tools:
+  - Create store-level promotions
+  - Coupon code generation
+  - Flash sale scheduling
+  - Featured product placement requests
+  - Customer engagement analytics
+REQ-VM-007: Staff Management:
+  - Add staff accounts with role-based permissions
+  - Activity logs per staff member
+  - Shift management for order handling
+REQ-VM-008: Store Settings:
+  - Operating hours (regular and holiday)
+  - Auto-close during off-hours
+  - Preparation time estimation settings
+  - Delivery radius configuration
+  - Minimum order value setting
+  - Store temporary closure (vacation mode)
+
+7.4 DELIVERY PERSONNEL MOBILE APP
+--------------------------------------
+REQ-DP-001: Registration & Onboarding:
+  - Personal information and ID verification
+  - Vehicle registration (motorcycle, bicycle, car)
+  - Background check consent
+  - Training module completion
+  - Bank account/e-wallet linking for payouts
+REQ-DP-002: Availability Management:
+  - Online/offline toggle
+  - Zone preference setting
+  - Shift scheduling
+  - Auto-assign based on proximity and availability
+REQ-DP-003: Order Assignment & Navigation:
+  - New order notification with pickup/delivery details
+  - Accept/reject order (with reject reason)
+  - Multi-order batching (up to 3 concurrent orders)
+  - GPS navigation to pickup and delivery locations
+  - Optimized route guidance
+  - Estimated earnings per order
+REQ-DP-004: Delivery Workflow:
+  - Arrive at store confirmation
+  - Order pickup confirmation (photo/barcode scan)
+  - Item verification checklist
+  - Navigate to customer
+  - Delivery confirmation:
+    * Customer signature (optional)
+    * Photo proof of delivery
+    * OTP verification for high-value orders
+  - Cash collection tracking (for COD orders)
+REQ-DP-005: Earnings & Financial:
+  - Real-time earnings tracker
+  - Detailed earning statements (per order, daily, weekly)
+  - Delivery fee breakdown
+  - Tips received
+  - Incentive/bonus tracking
+  - Payout request and history
+  - Tax documentation
+REQ-DP-006: Loyalty & Incentive Program:
+  - Deliveryman loyalty points system
+  - Refer-and-earn program
+  - Performance-based bonuses
+  - Achievement badges and milestones
+  - Peak hour bonus multipliers
+REQ-DP-007: Communication:
+  - In-app call/message to customer (masked number)
+  - In-app call/message to vendor
+  - Support chat
+  - Delivery issue reporting
+REQ-DP-008: Performance Dashboard:
+  - Delivery count statistics
+  - Average delivery time
+  - Customer ratings received
+  - Acceptance rate
+  - On-time delivery rate
+  - Completion rate
+
+7.5 ADMIN SUPER PANEL (Web)
+--------------------------------------
+REQ-AP-001: Dashboard:
+  - Real-time platform metrics (orders, revenue, active users)
+  - Geographic heatmap of orders
+  - System health monitoring
+  - Key performance indicators (KPIs)
+REQ-AP-002: User Management:
+  - Customer account management (view, suspend, delete)
+  - Vendor management (approve, suspend, feature)
+  - Delivery personnel management
+  - Admin staff management with role-based access control (RBAC)
+REQ-AP-003: Order Management:
+  - Global order monitoring
+  - Order intervention (cancel, reassign, refund)
+  - Dispute resolution tools
+  - Order analytics and reporting
+REQ-AP-004: Zone Management:
+  - Create/edit delivery zones on interactive map
+  - Zone-based pricing rules
+  - Zone-based vendor assignment
+  - Zone capacity management
+  - Surge pricing zone configuration
+REQ-AP-005: Financial Management:
+  - Commission configuration per category
+  - Vendor settlement processing
+  - Delivery personnel payout processing
+  - Revenue reporting and analytics
+  - Refund management
+  - Tax configuration per zone/region
+REQ-AP-006: Content Management:
+  - Banner/promotion management
+  - Category management
+  - Notification broadcast
+  - Email template management
+  - App content management (FAQ, terms, privacy policy)
+REQ-AP-007: Marketing & Promotions:
+  - Campaign creation and management
+  - Coupon/voucher generation (bulk)
+  - Referral program configuration
+  - Loyalty program tier management
+  - A/B testing for promotions
+REQ-AP-008: Analytics & Reporting:
+  - Sales analytics (by zone, category, vendor, time period)
+  - Customer analytics (acquisition, retention, LTV)
+  - Delivery performance analytics
+  - Vendor performance scorecard
+  - Financial reporting
+  - Custom report builder
+  - Data export (CSV, PDF, Excel)
+REQ-AP-009: System Configuration:
+  - Feature flags management
+  - Payment gateway configuration
+  - Notification service configuration
+  - API key management
+  - Rate limiting configuration
+  - Maintenance mode management
+
+7.6 ORDER MANAGEMENT SYSTEM
+--------------------------------------
+REQ-OM-001: Order Lifecycle:
+  - Placed -> Confirmed -> Preparing -> Ready -> Picked Up -> In Transit -> 
+    Delivered
+  - Status: Cancelled, Returned, Refunded (exception flows)
+REQ-OM-002: Order routing to nearest available store
+REQ-OM-003: Automatic delivery personnel assignment based on:
+  - Proximity to store
+  - Current workload
+  - Vehicle type suitability
+  - Rating/performance score
+  - Zone assignment
+REQ-OM-004: Split orders across multiple stores (if customer orders from 
+             multiple vendors in a single transaction)
+REQ-OM-005: Order scheduling (advance orders up to 7 days)
+REQ-OM-006: Recurring/subscription orders
+REQ-OM-007: Order modification window (5-minute window after placement)
+REQ-OM-008: Automatic escalation for delayed orders
+REQ-OM-009: Order batching for delivery optimization
+REQ-OM-010: Priority queue management (express vs standard)
+
+7.7 DELIVERY & LOGISTICS ENGINE
+--------------------------------------
+REQ-DL-001: Hyperlocal fulfillment routing:
+  - Orders routed to nearest affiliated store
+  - Multi-factor routing (distance, stock availability, preparation time)
+REQ-DL-002: Zone-wise delivery management:
+  - Geofenced delivery zones
+  - Zone-specific delivery fees
+  - Zone capacity limits
+  - Dynamic zone expansion/contraction based on demand
+REQ-DL-003: Real-time delivery tracking:
+  - GPS tracking with 10-second refresh interval
+  - Customer-facing live map
+  - Admin bird's-eye view of all active deliveries
+REQ-DL-004: Route optimization:
+  - AI-powered shortest path calculation
+  - Traffic-aware routing
+  - Multi-stop optimization for batched orders
+  - Dynamic re-routing for obstacles/closures
+REQ-DL-005: Delivery time estimation:
+  - ML-based ETA prediction considering:
+    * Distance
+    * Historical delivery times
+    * Current traffic conditions
+    * Time of day patterns
+    * Weather conditions
+    * Store preparation time
+REQ-DL-006: Delivery types:
+  - Standard (within 24 hours)
+  - Express (2-4 hours)
+  - Scheduled (customer picks time slot)
+  - Instant (within 30-60 minutes, premium zones only)
+REQ-DL-007: Fleet management:
+  - Vehicle type categorization
+  - Capacity management
+  - Maintenance scheduling alerts
+  - Fuel/charging cost tracking
+REQ-DL-008: Last-mile optimization:
+  - Walking delivery for ultra-close orders
+  - Bicycle delivery for short distance
+  - Motorcycle for standard
+  - Car/van for bulk orders
+REQ-DL-009: Proof of delivery:
+  - Photo confirmation
+  - Customer OTP verification
+  - Digital signature
+  - GPS location at delivery point
+
+7.8 PAYMENT & FINANCIAL SYSTEM
+--------------------------------------
+REQ-PF-001: Payment Methods:
+  - Credit/Debit cards via Stripe
+  - GCash (Philippine e-wallet)
+  - Maya/PayMaya
+  - GrabPay
+  - Bank transfer / InstaPay / PESONet
+  - Cash on delivery
+  - Daltaners Wallet (in-app wallet)
+  - QR code payments (QR Ph standard)
+REQ-PF-002: Payment Processing:
+  - PCI-DSS compliant payment handling
+  - Tokenized card storage
+  - 3D Secure authentication
+  - Idempotent payment processing
+  - Automatic retry for failed payments
+REQ-PF-003: Wallet System:
+  - Top-up via multiple methods
+  - Peer-to-peer transfer (user to user)
+  - Refund to wallet option
+  - Withdrawal to bank/e-wallet
+  - Transaction history
+REQ-PF-004: Vendor Settlement:
+  - Configurable settlement cycles (daily, weekly, bi-weekly)
+  - Commission auto-deduction
+  - Settlement report generation
+  - Bank transfer / GCash disbursement
+  - Withholding tax computation
+REQ-PF-005: Delivery Personnel Payout:
+  - Real-time earnings calculation
+  - Daily/weekly payout options
+  - Incentive and bonus inclusion
+  - Cash on delivery reconciliation
+REQ-PF-006: Refund Management:
+  - Automated refund for cancelled orders
+  - Partial refund for missing/damaged items
+  - Refund to original payment method or wallet
+  - Refund approval workflow for high amounts
+REQ-PF-007: Financial Reporting:
+  - Revenue by channel, zone, category
+  - Commission earned reports
+  - Tax reports (BIR-compliant)
+  - Reconciliation reports
+  - Audit trails for all financial transactions
+
+7.9 PROMOTIONS & MARKETING ENGINE
+--------------------------------------
+REQ-PM-001: Coupon/Voucher System:
+  - Percentage discount or fixed amount
+  - Minimum order value requirement
+  - Category/store-specific coupons
+  - Usage limits (per user, total)
+  - Date range validity
+  - First-order exclusive coupons
+  - Auto-apply best available coupon
+REQ-PM-002: Banner Management:
+  - Home page carousel banners
+  - Category page banners
+  - Store page banners
+  - Deep-link enabled banners
+  - A/B testing for banner performance
+REQ-PM-003: Flash Sales:
+  - Time-limited deals with countdown
+  - Stock-limited deals
+  - Store-initiated and platform-initiated
+REQ-PM-004: Referral Program:
+  - Unique referral codes per user
+  - Configurable rewards (referrer + referee)
+  - Multi-tier referral tracking
+  - Social sharing integration
+REQ-PM-005: Push Notification Campaigns:
+  - Segmented targeting (location, behavior, demographics)
+  - Scheduled notifications
+  - Rich notifications (images, actions)
+  - A/B testing for notification content
+REQ-PM-006: Email Marketing Integration:
+  - Abandoned cart reminders
+  - Order follow-up emails
+  - Personalized deal emails
+  - Newsletter management
+
+7.10 POS SYSTEM (In-Store)
+--------------------------------------
+REQ-POS-001: Sales Processing:
+  - Barcode scanning
+  - Manual product search
+  - Cart management
+  - Multiple payment methods
+  - Receipt printing (thermal printer)
+  - Digital receipt via SMS/email
+REQ-POS-002: Inventory Sync:
+  - Real-time sync with online inventory
+  - Stock deduction on in-store sale
+  - Cross-channel inventory visibility
+REQ-POS-003: Cash Management:
+  - Cash drawer management
+  - Shift opening/closing with cash count
+  - Cash reconciliation
+  - Z-report / end-of-day report
+REQ-POS-004: Integration:
+  - Unified product catalog with online store
+  - Order acceptance for online orders
+  - Customer loyalty point earning/redemption
+  - Vendor dashboard data sync
+REQ-POS-005: Hardware Compatibility:
+  - Touch screen terminals
+  - Barcode scanners
+  - Thermal receipt printers
+  - Cash drawers
+  - Weighing scales (for produce)
+  - Payment terminals (card readers)
+REQ-POS-006: Offline Mode:
+  - Continue sales during internet outage
+  - Auto-sync when connection restored
+  - Local data storage for resilience
+
+7.11 MESSAGING & COMMUNICATION SYSTEM
+--------------------------------------
+REQ-MC-001: In-App Messaging:
+  - Customer <-> Vendor chat per order
+  - Customer <-> Delivery personnel chat per order
+  - Message types: text, image, location share
+  - Read receipts
+  - Chat history preservation
+REQ-MC-002: Push Notifications:
+  - Order status updates
+  - Promotional notifications
+  - Price drop alerts for wishlisted items
+  - Stock availability alerts
+  - Delivery personnel earning updates
+REQ-MC-003: SMS Notifications:
+  - OTP verification
+  - Order confirmation
+  - Delivery updates (for non-app users)
+  - Critical account alerts
+REQ-MC-004: Email Notifications:
+  - Account verification
+  - Order receipts
+  - Settlement statements (vendors)
+  - Marketing campaigns
+REQ-MC-005: In-App Voice Calling:
+  - VoIP calling between customer and delivery personnel
+  - Number masking for privacy
+  - Call duration limits
+  - Fallback to regular call
+
+7.12 AI-POWERED INVENTORY MANAGEMENT
+--------------------------------------
+REQ-AI-001: Demand Forecasting:
+  - ML models predicting product demand by zone, time, and season
+  - Factor inputs: historical sales, weather, events, holidays, trends
+  - Daily, weekly, monthly forecast granularity
+  - Vendor-level and platform-level predictions
+REQ-AI-002: Stock Optimization:
+  - Optimal reorder point calculations
+  - Safety stock level recommendations
+  - Lead time prediction
+  - Waste reduction for perishables
+  - Auto-generated purchase order suggestions
+REQ-AI-003: Price Intelligence:
+  - Competitor price monitoring
+  - Dynamic pricing suggestions
+  - Markdown optimization for near-expiry products
+REQ-AI-004: Product Recommendations:
+  - Collaborative filtering (users who bought X also bought Y)
+  - Content-based filtering (similar products)
+  - Contextual recommendations (time of day, weather, occasion)
+  - Personalized homepage product feed
+  - Frequently bought together bundles
+REQ-AI-005: Supply Chain Optimization:
+  - Route optimization for vendor restocking
+  - Vendor performance prediction
+  - Delivery time optimization
+  - Demand-supply matching across zones
+REQ-AI-006: Anomaly Detection:
+  - Unusual order pattern detection
+  - Inventory discrepancy alerts
+  - Fraudulent activity flagging
+  - Price anomaly detection
+
+7.13 SEARCH & DISCOVERY ENGINE
+--------------------------------------
+REQ-SD-001: Full-text product search with typo tolerance
+REQ-SD-002: Faceted search (category, brand, price range, dietary, rating)
+REQ-SD-003: Search list feature:
+  - Paste or type multiple items
+  - Platform finds best matching products across stores
+  - One-click add all to cart
+REQ-SD-004: "Most Searched" trending panel
+REQ-SD-005: Auto-suggestions and predictive search
+REQ-SD-006: Visual search (photo of product to find listing)
+REQ-SD-007: Barcode/QR scan to product lookup
+REQ-SD-008: Category browsing with hierarchical navigation
+REQ-SD-009: Store discovery based on:
+  - Proximity
+  - Rating
+  - Delivery time
+  - Category specialization
+  - Promotional offers
+REQ-SD-010: Personalized search results based on order history
+
+7.14 RATING & REVIEW SYSTEM
+--------------------------------------
+REQ-RR-001: Store ratings (1-5 stars with comments)
+REQ-RR-002: Product ratings (1-5 stars with comments)
+REQ-RR-003: Delivery personnel ratings
+REQ-RR-004: Photo reviews
+REQ-RR-005: Review moderation (AI-assisted profanity/spam detection)
+REQ-RR-006: Verified purchase badges
+REQ-RR-007: Vendor response to reviews
+REQ-RR-008: Rating aggregation and display
+REQ-RR-009: Review helpfulness voting
+
+7.15 LOYALTY & REWARDS PROGRAM
+--------------------------------------
+REQ-LR-001: Points earning on every order (configurable rate)
+REQ-LR-002: Tier-based membership:
+  - Bronze: 0-999 points (base benefits)
+  - Silver: 1,000-4,999 points (5% bonus points, priority support)
+  - Gold: 5,000-14,999 points (10% bonus, free express delivery)
+  - Platinum: 15,000+ points (15% bonus, exclusive deals, personal shopper)
+REQ-LR-003: Points redemption for order discounts
+REQ-LR-004: Partner rewards (airline miles, hotel points conversion)
+REQ-LR-005: Gamification elements (challenges, streaks, badges)
+REQ-LR-006: Delivery personnel loyalty program (separate from customer)
+
+7.16 CAR RENTAL MODULE
+--------------------------------------
+REQ-CR-001: Vehicle listing with photos, specs, pricing
+REQ-CR-002: Rental types: hourly, daily, weekly, monthly
+REQ-CR-003: With driver / self-drive options
+REQ-CR-004: Pickup/dropoff location and time scheduling
+REQ-CR-005: Insurance package selection
+REQ-CR-006: Driver license verification
+REQ-CR-007: Vehicle condition documentation (before/after photos)
+REQ-CR-008: Real-time availability calendar
+REQ-CR-009: Rental extension and early return
+REQ-CR-010: Damage deposit and claim processing
+
+7.17 WHATSAPP INTEGRATION
+--------------------------------------
+REQ-WA-001: WhatsApp Business API integration for order placement
+REQ-WA-002: Conversational ordering flow:
+  - Browse categories via WhatsApp menu
+  - Product search via text
+  - Add to cart via replies
+  - Checkout and payment link
+REQ-WA-003: Order status updates via WhatsApp
+REQ-WA-004: Customer support via WhatsApp
+REQ-WA-005: Promotional message broadcasting (opt-in only)
+REQ-WA-006: Catalog sharing via WhatsApp
+REQ-WA-007: Group ordering feature via WhatsApp groups
+
+7.18 ANALYTICS & REPORTING DASHBOARD
+--------------------------------------
+REQ-AR-001: Real-time dashboard with key metrics
+REQ-AR-002: Sales analytics (revenue, order volume, AOV, conversion)
+REQ-AR-003: Customer analytics (DAU, MAU, retention, churn, LTV)
+REQ-AR-004: Delivery analytics (avg time, success rate, cost per delivery)
+REQ-AR-005: Vendor analytics (top performers, growth trends)
+REQ-AR-006: Product analytics (top sellers, low performers, search vs buy)
+REQ-AR-007: Zone analytics (performance by region)
+REQ-AR-008: Financial analytics (revenue, commissions, payouts)
+REQ-AR-009: Marketing analytics (campaign ROI, coupon redemption)
+REQ-AR-010: Custom report builder with scheduled exports
+REQ-AR-011: Data visualization (charts, heatmaps, trend lines)
+
+================================================================================
+8. ADDITIONAL FEATURES (Research-Based)
+================================================================================
+
+8.1 DARK STORE / MICRO-FULFILLMENT SUPPORT
+--------------------------------------
+REQ-DS-001: Dark store management module for Daltaners-operated fulfillment centers
+REQ-DS-002: Automated pick-pack-ship workflow
+REQ-DS-003: Warehouse zone layout management
+REQ-DS-004: Pick list generation and optimization
+REQ-DS-005: Integration with standard warehouse management operations
+REQ-DS-006: Performance tracking (pick rate, pack rate, accuracy)
+
+8.2 MULTI-LANGUAGE & LOCALIZATION
+--------------------------------------
+REQ-ML-001: Support for English, Filipino (Tagalog), and Cebuano
+REQ-ML-002: Right-to-left support architecture (for future Arabic expansion)
+REQ-ML-003: Currency formatting for Philippine Peso
+REQ-ML-004: Date/time formatting per locale
+REQ-ML-005: Localized push notifications
+REQ-ML-006: Vendor product descriptions in multiple languages
+
+8.3 SUBSCRIPTION & AUTO-REPLENISHMENT
+--------------------------------------
+REQ-SR-001: Recurring order scheduling (weekly, bi-weekly, monthly)
+REQ-SR-002: Auto-replenishment based on consumption patterns
+REQ-SR-003: Subscription management (pause, modify, cancel)
+REQ-SR-004: Subscription discounts (5-15% off regular price)
+REQ-SR-005: Delivery day preference for subscriptions
+
+8.4 SOCIAL COMMERCE INTEGRATION
+--------------------------------------
+REQ-SC-001: Share products/stores to Facebook, Instagram, TikTok
+REQ-SC-002: Social login integration
+REQ-SC-003: Group buying / collaborative purchasing
+REQ-SC-004: User-generated content (shopping lists, recommendations)
+REQ-SC-005: Influencer/affiliate program management
+
+8.5 VOICE-ENABLED ORDERING
+--------------------------------------
+REQ-VO-001: Voice search in customer app
+REQ-VO-002: Voice assistant for hands-free ordering
+REQ-VO-003: Multilingual voice recognition (English, Filipino)
+
+8.6 DYNAMIC PRICING & SURGE MANAGEMENT
+--------------------------------------
+REQ-DP-001: Surge pricing for delivery during peak demand
+REQ-DP-002: Dynamic delivery fee calculation
+REQ-DP-003: Price transparency (clear indication of surge pricing)
+REQ-DP-004: Vendor-controlled time-based pricing
+REQ-DP-005: Happy hour / off-peak discount automation
+
+8.7 CARBON FOOTPRINT TRACKER
+--------------------------------------
+REQ-CF-001: Carbon footprint calculation per delivery
+REQ-CF-002: Eco-friendly delivery option (batched, bicycle)
+REQ-CF-003: Monthly sustainability report for users
+REQ-CF-004: Carbon offset program participation
+
+8.8 VENDOR ONBOARDING AUTOMATION
+--------------------------------------
+REQ-VOA-001: Self-service vendor registration portal
+REQ-VOA-002: Automated document verification (OCR + AI)
+REQ-VOA-003: Auto-generated store template based on category
+REQ-VOA-004: Product catalog seeding from known databases
+REQ-VOA-005: Automated training module with certification
+
+8.9 FRAUD DETECTION & PREVENTION
+--------------------------------------
+REQ-FD-001: ML-based fraud scoring for orders
+REQ-FD-002: Velocity checks (rapid orders from same account)
+REQ-FD-003: Device fingerprinting
+REQ-FD-004: Address verification
+REQ-FD-005: Chargeback prevention system
+REQ-FD-006: Delivery fraud detection (false non-delivery claims)
+REQ-FD-007: Account takeover prevention
+
+8.10 ACCESSIBILITY (WCAG 2.1 COMPLIANCE)
+--------------------------------------
+REQ-AC-001: Screen reader compatibility
+REQ-AC-002: High contrast mode
+REQ-AC-003: Adjustable text size
+REQ-AC-004: Voice navigation
+REQ-AC-005: Keyboard navigation support (web)
+REQ-AC-006: Color-blind friendly design
+
+8.11 OFFLINE MODE SUPPORT
+--------------------------------------
+REQ-OF-001: Customer app offline product browsing (cached data)
+REQ-OF-002: Delivery app offline navigation with cached maps
+REQ-OF-003: POS offline sales mode
+REQ-OF-004: Auto-sync queue when connectivity restored
+REQ-OF-005: Conflict resolution for concurrent offline changes
+
+8.12 SMART SHOPPING LISTS & MEAL PLANNING
+--------------------------------------
+REQ-SL-001: AI-powered shopping list suggestions based on history
+REQ-SL-002: Meal planning module with ingredient auto-add
+REQ-SL-003: Weekly meal prep suggestions
+REQ-SL-004: Nutritional information tracking
+REQ-SL-005: Budget-based shopping list optimization
+REQ-SL-006: Recipe integration with product linking
+
+8.13 B2B/WHOLESALE ORDERING MODULE
+--------------------------------------
+REQ-B2B-001: Bulk order placement
+REQ-B2B-002: Wholesale pricing tiers
+REQ-B2B-003: Invoice-based payment (net 30/60)
+REQ-B2B-004: Purchase order management
+REQ-B2B-005: Tax-exempt ordering for businesses
+REQ-B2B-006: Dedicated account manager assignment
+
+8.14 DISPUTE RESOLUTION & ARBITRATION CENTER
+--------------------------------------
+REQ-DR-001: Automated dispute categorization
+REQ-DR-002: Evidence submission (photos, descriptions)
+REQ-DR-003: Three-party resolution (customer, vendor, platform)
+REQ-DR-004: Escalation workflow
+REQ-DR-005: Resolution timeline SLA
+REQ-DR-006: Automated refund/credit for eligible disputes
+
+8.15 DRIVER SAFETY & INSURANCE MODULE
+--------------------------------------
+REQ-DS-001: Accident reporting and documentation
+REQ-DS-002: Insurance claim workflow
+REQ-DS-003: Safety training modules
+REQ-DS-004: Speed monitoring and alerts
+REQ-DS-005: Rest time enforcement (maximum consecutive hours)
+REQ-DS-006: Emergency SOS button
+
+================================================================================
+9. NON-FUNCTIONAL REQUIREMENTS
+================================================================================
+
+9.1 PERFORMANCE REQUIREMENTS
+--------------------------------------
+REQ-NF-P001: Page load time < 2 seconds (p95)
+REQ-NF-P002: API response time < 200ms for simple queries (p95)
+REQ-NF-P003: API response time < 500ms for complex queries (p95)
+REQ-NF-P004: Search results returned < 300ms (p95)
+REQ-NF-P005: Real-time tracking update latency < 3 seconds
+REQ-NF-P006: Push notification delivery < 5 seconds
+REQ-NF-P007: Support 1,000,000 daily active users
+REQ-NF-P008: Support 100,000 concurrent users
+REQ-NF-P009: Support 1,000,000+ daily transactions
+REQ-NF-P010: Order placement to confirmation < 2 seconds
+REQ-NF-P011: Mobile app cold start < 3 seconds
+REQ-NF-P012: Image load time < 1 second (with CDN)
+
+9.2 SCALABILITY REQUIREMENTS
+--------------------------------------
+REQ-NF-S001: Horizontal scaling of all microservices
+REQ-NF-S002: Auto-scaling based on traffic patterns
+REQ-NF-S003: Database read replicas for read-heavy services
+REQ-NF-S004: CDN for static assets and images
+REQ-NF-S005: Message queue for asynchronous processing
+REQ-NF-S006: Cache layer for frequently accessed data
+REQ-NF-S007: Support 10x traffic spike during promotions
+REQ-NF-S008: Linear scaling of write throughput with CassandraDB nodes
+REQ-NF-S009: Geographic distribution for multi-region deployment
+
+9.3 SECURITY REQUIREMENTS
+--------------------------------------
+REQ-NF-SEC001: End-to-end encryption for all API communications (TLS 1.3)
+REQ-NF-SEC002: Data encryption at rest (AES-256)
+REQ-NF-SEC003: PCI-DSS Level 1 compliance for payment handling
+REQ-NF-SEC004: OWASP Top 10 vulnerability protection
+REQ-NF-SEC005: SQL injection prevention via parameterized queries
+REQ-NF-SEC006: XSS prevention via input sanitization
+REQ-NF-SEC007: CSRF protection for all state-changing operations
+REQ-NF-SEC008: Rate limiting per API endpoint
+REQ-NF-SEC009: JWT-based authentication with refresh token rotation
+REQ-NF-SEC010: Role-based access control (RBAC) for all panels
+REQ-NF-SEC011: Two-factor authentication for admin and vendor accounts
+REQ-NF-SEC012: API key management and rotation
+REQ-NF-SEC013: Audit logging for all sensitive operations
+REQ-NF-SEC014: GDPR-inspired data privacy compliance (Philippine Data 
+               Privacy Act RA 10173)
+REQ-NF-SEC015: Regular penetration testing (quarterly)
+REQ-NF-SEC016: Vulnerability scanning in CI/CD pipeline
+REQ-NF-SEC017: SOC 2 Type II compliance (target within 2 years)
+
+9.4 RELIABILITY & AVAILABILITY
+--------------------------------------
+REQ-NF-R001: 99.95% uptime SLA for customer-facing services
+REQ-NF-R002: 99.99% uptime for payment processing
+REQ-NF-R003: Automated failover for all critical services
+REQ-NF-R004: Multi-availability zone deployment
+REQ-NF-R005: Disaster recovery with < 4 hour RTO, < 1 hour RPO
+REQ-NF-R006: Automated backup (database: hourly incremental, daily full)
+REQ-NF-R007: Circuit breaker pattern for external service dependencies
+REQ-NF-R008: Graceful degradation during partial outages
+REQ-NF-R009: Blue-green deployment for zero-downtime releases
+REQ-NF-R010: Chaos engineering testing (quarterly)
+
+9.5 COMPLIANCE & REGULATORY
+--------------------------------------
+REQ-NF-C001: Philippine Data Privacy Act (RA 10173) compliance
+REQ-NF-C002: BSP (Bangko Sentral ng Pilipinas) e-money regulations
+REQ-NF-C003: FDA Philippines compliance for pharmacy module
+REQ-NF-C004: DTI e-commerce regulations
+REQ-NF-C005: BIR tax reporting requirements
+REQ-NF-C006: LTO compliance for car rental module
+REQ-NF-C007: Consumer Act of the Philippines (RA 7394)
+REQ-NF-C008: Anti-Money Laundering Act compliance
+
+================================================================================
+10. USER EXPERIENCE REQUIREMENTS
+================================================================================
+
+REQ-UX-001: Mobile-first design approach (98% mobile users in PH)
+REQ-UX-002: Maximum 3 taps from app launch to order placement
+REQ-UX-003: Consistent design system across all platforms
+REQ-UX-004: Optimized for low-bandwidth connections (2G/3G support)
+REQ-UX-005: Progressive image loading with placeholders
+REQ-UX-006: Skeleton loading screens for perceived performance
+REQ-UX-007: Haptic feedback for key actions on mobile
+REQ-UX-008: Dark mode support
+REQ-UX-009: Gesture-based navigation support
+REQ-UX-010: Onboarding flow with guided tutorial (skippable)
+REQ-UX-011: Smart defaults based on user location and behavior
+REQ-UX-012: Error handling with clear, actionable messages
+REQ-UX-013: Confirmation dialogs for destructive actions
+REQ-UX-014: Loading states for all async operations
+REQ-UX-015: Empty state designs with CTAs
+REQ-UX-016: Pull-to-refresh for real-time data
+REQ-UX-017: Infinite scroll with pagination for product listings
+
+================================================================================
+11. INTEGRATION REQUIREMENTS
+================================================================================
+
+REQ-INT-001: Stripe Connect for marketplace payments
+REQ-INT-002: GCash API for e-wallet payments
+REQ-INT-003: Maya API for e-wallet payments
+REQ-INT-004: WhatsApp Business API (Cloud API)
+REQ-INT-005: Google Maps Platform (Maps, Directions, Geocoding, Places)
+REQ-INT-006: Firebase Cloud Messaging (push notifications)
+REQ-INT-007: Apple Push Notification Service (APNs)
+REQ-INT-008: Twilio/Vonage for SMS OTP and voice calls
+REQ-INT-009: SendGrid/Mailgun for transactional emails
+REQ-INT-010: Elasticsearch for search functionality
+REQ-INT-011: Redis for caching and real-time features
+REQ-INT-012: RabbitMQ/Apache Kafka for event streaming
+REQ-INT-013: AWS S3 / Cloudflare R2 for file storage
+REQ-INT-014: CloudFlare CDN for asset delivery
+REQ-INT-015: Sentry for error tracking and monitoring
+REQ-INT-016: DataDog/Grafana for infrastructure monitoring
+REQ-INT-017: ELK Stack for log aggregation
+REQ-INT-018: TensorFlow/PyTorch for ML model serving
+REQ-INT-019: Social media APIs (Facebook, Google, Apple) for auth
+REQ-INT-020: Philippine payment networks (InstaPay, PESONet, QR Ph)
+
+================================================================================
+12. DATA REQUIREMENTS & ANALYTICS
+================================================================================
+
+REQ-DATA-001: Event-driven data pipeline for real-time analytics
+REQ-DATA-002: Data warehouse for historical analysis (BigQuery/Redshift)
+REQ-DATA-003: Customer data platform for unified user profiles
+REQ-DATA-004: A/B testing infrastructure
+REQ-DATA-005: Feature flagging system
+REQ-DATA-006: Data retention policies per data category:
+  - Order data: 7 years (tax compliance)
+  - User behavior data: 2 years
+  - Chat messages: 1 year
+  - Delivery tracking: 6 months
+  - Logs: 90 days
+REQ-DATA-007: Data anonymization for analytics
+REQ-DATA-008: Real-time event streaming for operational dashboards
+REQ-DATA-009: ML feature store for recommendation models
+
+================================================================================
+13. OPERATIONAL REQUIREMENTS
+================================================================================
+
+REQ-OPS-001: 24/7 customer support (chat, email, phone)
+REQ-OPS-002: Vendor support team (business hours + on-call)
+REQ-OPS-003: Delivery operations center (real-time monitoring)
+REQ-OPS-004: Incident response team with < 15 min response time
+REQ-OPS-005: Change management process for deployments
+REQ-OPS-006: Runbook documentation for all critical systems
+REQ-OPS-007: On-call rotation for engineering teams
+REQ-OPS-008: Quarterly disaster recovery drills
+REQ-OPS-009: Monthly security review and patching
+REQ-OPS-010: Weekly performance review and optimization
+REQ-OPS-011: CI/CD pipeline with automated testing (unit, integration, e2e)
+REQ-OPS-012: Feature flag-controlled rollouts
+REQ-OPS-013: Canary deployments for risk mitigation
+REQ-OPS-014: Database migration automation with rollback capability
+REQ-OPS-015: Infrastructure as Code (Terraform/Pulumi)
+
+================================================================================
+14. RELEASE STRATEGY & PHASING
+================================================================================
+
+PHASE 1: MVP (Months 1-6)
+--------------------------------------
+- Customer mobile app (Android + iOS) with core shopping
+- Vendor web dashboard with product and order management
+- Delivery personnel mobile app
+- Admin panel with basic management
+- Grocery delivery vertical only
+- Metro Manila zones only
+- Core payment methods (GCash, COD, Card)
+- Basic search and browse
+- Order tracking (basic)
+- Push notifications
+
+PHASE 2: Growth (Months 7-12)
+--------------------------------------
+- Food delivery vertical
+- Pharmacy delivery vertical
+- Multi-city expansion (Cebu, Davao)
+- POS system
+- Advanced search with Elasticsearch
+- AI-powered recommendations (basic)
+- Loyalty program
+- Coupon/promotion engine
+- WhatsApp ordering (basic)
+- Rating and review system
+- In-app messaging
+
+PHASE 3: Scale (Months 13-18)
+--------------------------------------
+- Parcel delivery vertical
+- Car rental module
+- AI inventory management
+- Subscription/recurring orders
+- B2B ordering module
+- Advanced analytics dashboard
+- Multi-language support
+- Social commerce features
+- Dark store management
+- Dynamic pricing
+- Nationwide expansion
+
+PHASE 4: Innovation (Months 19-24)
+--------------------------------------
+- Voice-enabled ordering
+- Visual search
+- Carbon footprint tracker
+- Advanced fraud detection (ML)
+- Predictive delivery ETAs (ML)
+- API marketplace for third-party integrations
+- International expansion preparation
+- Financial services (wallet, BNPL)
+- Advanced personalization engine
+- Automated vendor onboarding
+
+================================================================================
+15. SUCCESS METRICS & KPIs
+================================================================================
+
+BUSINESS METRICS:
+- Gross Merchandise Value (GMV): ₱50M/month by Month 12
+- Monthly Active Users (MAU): 500,000 by Month 12
+- Active Vendors: 5,000 by Month 12
+- Active Delivery Personnel: 10,000 by Month 12
+- Average Order Value (AOV): ₱350+
+- Customer Acquisition Cost (CAC): < ₱150
+- Customer Lifetime Value (LTV): > ₱3,000
+- LTV/CAC Ratio: > 3:1
+
+OPERATIONAL METRICS:
+- On-time Delivery Rate: > 95%
+- Average Delivery Time: < 45 minutes (express), < 4 hours (standard)
+- Order Fulfillment Rate: > 98%
+- First-order Conversion Rate: > 15%
+- Customer Retention (30-day): > 40%
+- Customer Retention (90-day): > 25%
+- App Crash Rate: < 0.1%
+- Customer Support Resolution Time: < 4 hours
+
+VENDOR METRICS:
+- Vendor Onboarding Time: < 48 hours
+- Vendor Retention Rate (12-month): > 80%
+- Average Vendor Revenue Growth: > 20% QoQ
+- Vendor Satisfaction Score: > 4.0/5.0
+
+DELIVERY METRICS:
+- Delivery Partner Retention: > 70% (12-month)
+- Average Deliveries per Partner per Day: > 12
+- Delivery Partner Satisfaction Score: > 4.0/5.0
+
+================================================================================
+16. RISK ASSESSMENT & MITIGATION
+================================================================================
+
+| Risk                          | Impact | Likelihood | Mitigation              |
+|-------------------------------|--------|------------|-------------------------|
+| Vendor supply chain           | High   | Medium     | AI demand forecasting,  |
+| disruption                    |        |            | multi-vendor redundancy |
+| Payment fraud                 | High   | Medium     | ML fraud detection,     |
+|                               |        |            | 3D Secure, velocity     |
+|                               |        |            | checks                  |
+| Data breach                   | Critical| Low       | Encryption, pen testing,|
+|                               |        |            | SOC 2 compliance        |
+| Delivery personnel shortage   | Medium | High       | Incentive programs,     |
+|                               |        |            | flexible scheduling,    |
+|                               |        |            | loyalty points          |
+| Infrastructure failure        | Critical| Low       | Multi-AZ deployment,    |
+|                               |        |            | auto-scaling, DR plan   |
+| Regulatory changes            | Medium | Medium     | Legal monitoring,       |
+|                               |        |            | compliance team,        |
+|                               |        |            | modular regulation      |
+| Low merchant adoption         | High   | Medium     | Free tier, onboarding   |
+|                               |        |            | support, success        |
+|                               |        |            | managers                |
+| Competitor pricing war        | Medium | High       | Value-add features,     |
+|                               |        |            | loyalty program,        |
+|                               |        |            | service quality         |
+| Natural disaster / typhoon    | High   | Medium     | Multi-region infra,     |
+|                               |        |            | disaster mode,          |
+|                               |        |            | essential delivery only |
+| App store rejection           | Medium | Low        | Apple/Google guidelines |
+|                               |        |            | compliance review       |
+
+================================================================================
+17. APPENDICES
+================================================================================
+
+APPENDIX A: GLOSSARY
+--------------------------------------
+- O2O: Online-to-Offline commerce model
+- SKU: Stock Keeping Unit
+- GMV: Gross Merchandise Value
+- AOV: Average Order Value
+- CAC: Customer Acquisition Cost
+- LTV: Customer Lifetime Value
+- ETA: Estimated Time of Arrival
+- COD: Cash on Delivery
+- POS: Point of Sale
+- KYC: Know Your Customer
+- RBAC: Role-Based Access Control
+- SLA: Service Level Agreement
+- RTO: Recovery Time Objective
+- RPO: Recovery Point Objective
+- BIR: Bureau of Internal Revenue (Philippines)
+- BSP: Bangko Sentral ng Pilipinas
+- DTI: Department of Trade and Industry
+- FDA: Food and Drug Administration (Philippines)
+- LTO: Land Transportation Office (Philippines)
+
+APPENDIX B: REFERENCES & BENCHMARKS
+--------------------------------------
+- Amazon Fresh: Marketplace architecture, AI recommendations, 
+  fulfillment optimization
+- Carrefour Marketplace: Multi-vendor management, European-scale 
+  logistics, vendor onboarding
+- Blinkit (India): Hyperlocal delivery architecture, microservices, 
+  10-minute delivery model
+- GrabMart (SEA): Regional payment integration, super-app model
+- DoorDash (US): Delivery logistics optimization, dasher management
+
+APPENDIX C: REGULATORY REFERENCES
+--------------------------------------
+- RA 10173: Data Privacy Act of 2012
+- RA 7394: Consumer Act of the Philippines
+- RA 10175: Cybercrime Prevention Act
+- BSP Circular No. 944: E-Money Regulations
+- BIR Revenue Regulations for E-Commerce
+
+================================================================================
+END OF PRODUCT REQUIREMENTS DOCUMENT
+================================================================================

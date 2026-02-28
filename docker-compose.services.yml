@@ -1,0 +1,315 @@
+# ──────────────────────────────────────────────
+# Daltaners — Application Services Compose
+# Extends the infrastructure in docker-compose.yml
+#
+# Usage (always include both files):
+#   docker compose -f docker-compose.yml -f docker-compose.services.yml up -d
+#   docker compose -f docker-compose.yml -f docker-compose.services.yml up -d auth-service
+#   docker compose -f docker-compose.yml -f docker-compose.services.yml build auth-service
+#
+# Or start infra separately then services:
+#   docker compose up -d                                                 # Infra only
+#   docker compose -f docker-compose.yml -f docker-compose.services.yml up -d auth-service
+# ──────────────────────────────────────────────
+
+version: '3.9'
+
+services:
+  # ──────────────────────────────────────────────
+  # Backend Services
+  # ──────────────────────────────────────────────
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: services/auth-service/Dockerfile
+    image: daltaners/auth-service:latest
+    container_name: daltaners-auth-service
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_HOST: daltaners-postgres
+      REDIS_HOST: daltaners-redis
+      KAFKA_BROKERS: daltaners-kafka:29092
+    ports:
+      - '3001:3001'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - daltaners-network
+
+  user-service:
+    build:
+      context: .
+      dockerfile: services/user-service/Dockerfile
+    image: daltaners/user-service:latest
+    container_name: daltaners-user-service
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_HOST: daltaners-postgres
+      REDIS_HOST: daltaners-redis
+      KAFKA_BROKERS: daltaners-kafka:29092
+    ports:
+      - '3002:3002'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - daltaners-network
+
+  vendor-service:
+    build:
+      context: .
+      dockerfile: services/vendor-service/Dockerfile
+    image: daltaners/vendor-service:latest
+    container_name: daltaners-vendor-service
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_HOST: daltaners-postgres
+      REDIS_HOST: daltaners-redis
+      KAFKA_BROKERS: daltaners-kafka:29092
+    ports:
+      - '3003:3003'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - daltaners-network
+
+  catalog-service:
+    build:
+      context: .
+      dockerfile: services/catalog-service/Dockerfile
+    image: daltaners/catalog-service:latest
+    container_name: daltaners-catalog-service
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_HOST: daltaners-postgres
+      REDIS_HOST: daltaners-redis
+      KAFKA_BROKERS: daltaners-kafka:29092
+      ELASTICSEARCH_NODE: http://daltaners-elasticsearch:9200
+    ports:
+      - '3004:3004'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - daltaners-network
+
+  inventory-service:
+    build:
+      context: .
+      dockerfile: services/inventory-service/Dockerfile
+    image: daltaners/inventory-service:latest
+    container_name: daltaners-inventory-service
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_HOST: daltaners-postgres
+      REDIS_HOST: daltaners-redis
+      KAFKA_BROKERS: daltaners-kafka:29092
+    ports:
+      - '3005:3005'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - daltaners-network
+
+  order-service:
+    build:
+      context: .
+      dockerfile: services/order-service/Dockerfile
+    image: daltaners/order-service:latest
+    container_name: daltaners-order-service
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_HOST: daltaners-postgres
+      REDIS_HOST: daltaners-redis
+      KAFKA_BROKERS: daltaners-kafka:29092
+    ports:
+      - '3006:3006'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - daltaners-network
+
+  delivery-service:
+    build:
+      context: .
+      dockerfile: services/delivery-service/Dockerfile
+    image: daltaners/delivery-service:latest
+    container_name: daltaners-delivery-service
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_HOST: daltaners-postgres
+      REDIS_HOST: daltaners-redis
+      KAFKA_BROKERS: daltaners-kafka:29092
+    ports:
+      - '3007:3007'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - daltaners-network
+
+  payment-service:
+    build:
+      context: .
+      dockerfile: services/payment-service/Dockerfile
+    image: daltaners/payment-service:latest
+    container_name: daltaners-payment-service
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_HOST: daltaners-postgres
+      REDIS_HOST: daltaners-redis
+      KAFKA_BROKERS: daltaners-kafka:29092
+    ports:
+      - '3008:3008'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - daltaners-network
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: services/notification-service/Dockerfile
+    image: daltaners/notification-service:latest
+    container_name: daltaners-notification-service
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_HOST: daltaners-postgres
+      REDIS_HOST: daltaners-redis
+      KAFKA_BROKERS: daltaners-kafka:29092
+      CASSANDRA_CONTACT_POINTS: daltaners-cassandra
+    ports:
+      - '3010:3010'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      cassandra:
+        condition: service_healthy
+    networks:
+      - daltaners-network
+
+  zone-service:
+    build:
+      context: .
+      dockerfile: services/zone-service/Dockerfile
+    image: daltaners/zone-service:latest
+    container_name: daltaners-zone-service
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_HOST: daltaners-postgres
+      REDIS_HOST: daltaners-redis
+      KAFKA_BROKERS: daltaners-kafka:29092
+    ports:
+      - '3014:3014'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - daltaners-network
+
+  # ──────────────────────────────────────────────
+  # Frontend Apps
+  # ──────────────────────────────────────────────
+
+  customer-web:
+    build:
+      context: .
+      dockerfile: apps/customer-web/Dockerfile
+    image: daltaners/customer-web:latest
+    container_name: daltaners-customer-web
+    restart: unless-stopped
+    ports:
+      - '8080:80'
+    depends_on:
+      auth-service:
+        condition: service_started
+    networks:
+      - daltaners-network
+
+  admin-panel:
+    build:
+      context: .
+      dockerfile: apps/admin-panel/Dockerfile
+    image: daltaners/admin-panel:latest
+    container_name: daltaners-admin-panel
+    restart: unless-stopped
+    ports:
+      - '8081:80'
+    depends_on:
+      auth-service:
+        condition: service_started
+    networks:
+      - daltaners-network
+
+  vendor-dashboard:
+    build:
+      context: .
+      dockerfile: apps/vendor-dashboard/Dockerfile
+    image: daltaners/vendor-dashboard:latest
+    container_name: daltaners-vendor-dashboard
+    restart: unless-stopped
+    ports:
+      - '8082:80'
+    depends_on:
+      auth-service:
+        condition: service_started
+    networks:
+      - daltaners-network

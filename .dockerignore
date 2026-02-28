@@ -1,0 +1,52 @@
+# Dependencies
+node_modules
+**/node_modules
+
+# Build output
+**/dist
+**/build
+
+# Git
+.git
+.gitignore
+
+# Tests
+**/tests
+**/*.spec.ts
+**/*.test.ts
+**/jest.config.ts
+**/tsconfig.test.json
+coverage
+**/coverage
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Documentation
+*.md
+LICENSE
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Turbo
+.turbo
+**/.turbo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose*.yml
+**/Dockerfile
+
+# Misc
+*.log
+npm-debug.log*
+pnpm-debug.log*
