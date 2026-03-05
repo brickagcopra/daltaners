@@ -253,6 +253,7 @@ export function ProductForm({ product, onSubmit, isSubmitting }: ProductFormProp
           <Input
             label="Barcode"
             placeholder="Optional barcode"
+            hint="EAN-13, UPC-A, or any barcode format"
             {...register('barcode')}
           />
           <div className="grid grid-cols-2 gap-2">
