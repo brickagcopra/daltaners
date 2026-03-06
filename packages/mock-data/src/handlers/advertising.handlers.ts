@@ -264,8 +264,8 @@ async function handleAdminListCampaigns(request: Request) {
   if (storeId) filtered = filtered.filter((c) => c.store_id === storeId);
 
   filtered.sort((a, b) => {
-    const aVal = (a as Record<string, unknown>)[sortBy];
-    const bVal = (b as Record<string, unknown>)[sortBy];
+    const aVal = (a as unknown as Record<string, unknown>)[sortBy];
+    const bVal = (b as unknown as Record<string, unknown>)[sortBy];
     if (typeof aVal === 'number' && typeof bVal === 'number') {
       return sortOrder === 'ASC' ? aVal - bVal : bVal - aVal;
     }
@@ -396,7 +396,7 @@ async function handleBanners(request: Request) {
   return wrap(banners.slice(0, limit));
 }
 
-async function handleRecordImpression(request: Request, campaignId: string) {
+async function handleRecordImpression(_request: Request, campaignId: string) {
   await delay(50);
   const camp = localCampaigns.find((c) => c.id === campaignId);
   if (!camp) return errorResponse(404, 'CAMPAIGN_NOT_FOUND', 'Campaign not found');
@@ -409,7 +409,7 @@ async function handleRecordImpression(request: Request, campaignId: string) {
   }, { status: 201 });
 }
 
-async function handleRecordClick(request: Request, campaignId: string) {
+async function handleRecordClick(_request: Request, campaignId: string) {
   await delay(50);
   const camp = localCampaigns.find((c) => c.id === campaignId);
   if (!camp) return errorResponse(404, 'CAMPAIGN_NOT_FOUND', 'Campaign not found');

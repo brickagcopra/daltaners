@@ -4,7 +4,7 @@ import api from '@/lib/api';
 interface ApiResponse<T> {
   success: boolean;
   data: T;
-  meta?: { page: number; limit: number; total: number };
+  meta?: { page: number; limit: number; total: number; totalPages: number };
   timestamp: string;
 }
 

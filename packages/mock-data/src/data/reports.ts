@@ -256,7 +256,7 @@ export const financialReport: MockFinancialReport = {
 
 // ---------- Audit Log Mock Data ----------
 
-const adminUsers = [
+export const adminUsers = [
   { id: 'admin-001', name: 'Carlos Mendoza', email: 'carlos.mendoza@daltaners.ph' },
   { id: 'admin-002', name: 'Maria Santos', email: 'maria.santos@daltaners.ph' },
   { id: 'admin-003', name: 'Jose Reyes', email: 'jose.reyes@daltaners.ph' },

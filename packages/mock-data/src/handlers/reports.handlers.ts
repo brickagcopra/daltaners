@@ -19,8 +19,8 @@ export const reportsHandlers = [
   http.get(`${BASE}/admin/reports/revenue-summary`, async ({ request }) => {
     await delay(400);
     const params = getSearchParams(request);
-    const _period = params.get('period') || 'monthly'; // daily, weekly, monthly, quarterly, yearly
-    // In real app, filter by period — for mock, return same data
+    // period param available: daily, weekly, monthly, quarterly, yearly — mock returns same data
+    void params.get('period');
     return wrap(financialReport.revenue_summary);
   }),
 

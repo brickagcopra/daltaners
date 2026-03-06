@@ -276,9 +276,9 @@ function ConfigFormModal({
 }) {
   const [name, setName] = useState(config?.name || '');
   const [description, setDescription] = useState(config?.description || '');
-  const [taxType, setTaxType] = useState(config?.tax_type || 'vat');
+  const [taxType, setTaxType] = useState<'custom' | 'vat' | 'ewt' | 'percentage_tax' | 'excise'>(config?.tax_type || 'vat');
   const [rate, setRate] = useState(String((config?.rate || 0) * 100));
-  const [appliesTo, setAppliesTo] = useState(config?.applies_to || 'all');
+  const [appliesTo, setAppliesTo] = useState<'category' | 'all' | 'zone' | 'vendor_tier'>(config?.applies_to || 'all');
   const [appliesToValue, setAppliesToValue] = useState(config?.applies_to_value || '');
   const [isInclusive, setIsInclusive] = useState(config?.is_inclusive ?? true);
   const [isActive, setIsActive] = useState(config?.is_active ?? true);
@@ -323,7 +323,7 @@ function ConfigFormModal({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700">Tax Type</label>
-              <select value={taxType} onChange={(e) => setTaxType(e.target.value)} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+              <select value={taxType} onChange={(e) => setTaxType(e.target.value as typeof taxType)} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
                 <option value="vat">VAT</option>
                 <option value="ewt">EWT</option>
                 <option value="percentage_tax">Percentage Tax</option>
@@ -339,7 +339,7 @@ function ConfigFormModal({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700">Applies To</label>
-              <select value={appliesTo} onChange={(e) => setAppliesTo(e.target.value)} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+              <select value={appliesTo} onChange={(e) => setAppliesTo(e.target.value as typeof appliesTo)} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
                 <option value="all">All</option>
                 <option value="category">Category</option>
                 <option value="zone">Zone</option>

@@ -11,7 +11,6 @@ import {
   DISPUTE_CATEGORY_LABELS,
   DISPUTE_PRIORITY_LABELS,
   DISPUTE_PRIORITY_COLORS,
-  DISPUTE_RESOLUTION_LABELS,
   type DisputeStatus,
   type DisputeCategory,
   type DisputePriority,
@@ -115,9 +114,6 @@ export function DisputesPage() {
   const resolveMutation = useResolveDispute();
   const closeMutation = useCloseDispute();
   const autoEscalateMutation = useAutoEscalateDisputes();
-
-  const formatCurrency = (amount: number) =>
-    `P${amount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}`;
 
   const openAction = (dispute: Dispute, type: AdminAction) => {
     setActionTarget(dispute);

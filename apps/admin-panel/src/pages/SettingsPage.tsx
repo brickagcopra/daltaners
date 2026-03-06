@@ -12,7 +12,6 @@ import type {
   PaymentSettings,
   SecuritySettings,
   NotificationSettings,
-  FeatureFlag,
 } from '@/hooks/useSettings';
 
 type SettingsTab = 'general' | 'commerce' | 'payments' | 'security' | 'notifications' | 'feature_flags';
