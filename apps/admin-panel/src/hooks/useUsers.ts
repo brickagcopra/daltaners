@@ -3,15 +3,14 @@ import api from '@/lib/api';
 
 export interface User {
   id: string;
-  email: string;
-  name: string;
-  phone: string;
+  email: string | null;
+  phone: string | null;
   role: 'customer' | 'vendor_owner' | 'vendor_staff' | 'delivery' | 'admin';
-  status: 'active' | 'suspended' | 'banned';
-  emailVerified: boolean;
-  createdAt: string;
-  lastLoginAt: string | null;
-  avatar?: string;
+  is_verified: boolean;
+  is_active: boolean;
+  mfa_enabled: boolean;
+  last_login_at: string | null;
+  created_at: string;
 }
 
 interface UsersFilters {
@@ -38,6 +37,15 @@ interface UserResponse {
   data: User;
 }
 
+interface CreateUserPayload {
+  email?: string;
+  phone?: string;
+  password: string;
+  first_name: string;
+  last_name: string;
+  role: string;
+}
+
 export function useUsers(filters: UsersFilters = {}) {
   const { page = 1, limit = 20, search, role, status } = filters;
 
@@ -51,7 +59,7 @@ export function useUsers(filters: UsersFilters = {}) {
       if (role) params.set('role', role);
       if (status) params.set('status', status);
 
-      const response = await api.get<UsersResponse>(`/admin/users?${params.toString()}`);
+      const response = await api.get<UsersResponse>(`/auth/admin/users?${params.toString()}`);
       return response.data;
     },
   });
@@ -61,7 +69,7 @@ export function useUser(id: string) {
   return useQuery({
     queryKey: ['admin', 'users', id],
     queryFn: async () => {
-      const response = await api.get<UserResponse>(`/admin/users/${id}`);
+      const response = await api.get<UserResponse>(`/auth/admin/users/${id}`);
       return response.data;
     },
     enabled: !!id,
@@ -72,12 +80,37 @@ export function useUpdateUser() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<User> }) => {
-      const response = await api.patch<UserResponse>(`/admin/users/${id}`, data);
+    mutationFn: async ({ id, data }: { id: string; data: Record<string, unknown> }) => {
+      const response = await api.patch<UserResponse>(`/auth/admin/users/${id}`, data);
       return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+    },
+  });
+}
+
+export function useCreateUser() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: CreateUserPayload) => {
+      const response = await api.post<UserResponse>('/auth/admin/users', data);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+    },
+  });
+}
+
+export function useResetUserPassword() {
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const response = await api.post<{ success: boolean; data: { temporary_password: string } }>(
+        `/auth/admin/users/${id}/reset-password`,
+      );
+      return response.data;
     },
   });
 }

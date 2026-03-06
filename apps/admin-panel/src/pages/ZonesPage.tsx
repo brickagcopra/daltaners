@@ -5,12 +5,20 @@ import { ZoneForm } from '@/components/zones/ZoneForm';
 import { Pagination } from '@/components/common/Pagination';
 import { Button } from '@/components/ui/Button';
 
+const CITY_TABS = [
+  { key: 'all', label: 'All Cities' },
+  { key: 'Metro Manila', label: 'Metro Manila' },
+  { key: 'Cebu', label: 'Cebu' },
+  { key: 'Davao del Sur', label: 'Davao' },
+];
+
 export function ZonesPage() {
   const [page, setPage] = useState(1);
+  const [cityFilter, setCityFilter] = useState('all');
   const [formOpen, setFormOpen] = useState(false);
   const [editZone, setEditZone] = useState<Zone | null>(null);
 
-  const { data, isLoading } = useZones(page, 20);
+  const { data, isLoading } = useZones(page, 20, cityFilter);
   const createMutation = useCreateZone();
   const updateMutation = useUpdateZone();
 
@@ -45,12 +53,17 @@ export function ZonesPage() {
     }
   };
 
+  const handleCityFilterChange = (city: string) => {
+    setCityFilter(city);
+    setPage(1);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Delivery Zones</h1>
-          <p className="mt-1 text-sm text-gray-500">Manage delivery coverage areas and pricing</p>
+          <p className="mt-1 text-sm text-gray-500">Manage delivery coverage areas, pricing, and surge multipliers</p>
         </div>
         <Button onClick={handleCreate}>
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -60,10 +73,27 @@ export function ZonesPage() {
         </Button>
       </div>
 
+      {/* City Filter Tabs */}
+      <div className="flex gap-1 rounded-lg bg-gray-100 p-1">
+        {CITY_TABS.map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => handleCityFilterChange(tab.key)}
+            className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+              cityFilter === tab.key
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       {/* Table */}
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
         <ZoneTable
-          zones={data?.data || []}
+          zones={Array.isArray(data?.data) ? data.data : []}
           isLoading={isLoading}
           onEdit={handleEdit}
         />

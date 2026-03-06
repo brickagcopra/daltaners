@@ -1,11 +1,9 @@
-version: '3.9'
-
 services:
   # ──────────────────────────────────────────────
-  # PostgreSQL 16 with PostGIS
+  # PostgreSQL 17 with PostGIS
   # ──────────────────────────────────────────────
   postgres:
-    image: postgis/postgis:16-3.4
+    image: postgis/postgis:17-3.5
     container_name: daltaners-postgres
     restart: unless-stopped
     environment:
@@ -62,7 +60,7 @@ services:
       - zookeeper_data:/var/lib/zookeeper/data
       - zookeeper_log:/var/lib/zookeeper/log
     healthcheck:
-      test: ['CMD-SHELL', 'echo ruok | nc localhost 2181 | grep imok']
+      test: ['CMD-SHELL', 'echo srvr | nc localhost 2181 | grep Mode']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -90,7 +88,7 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'false'
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
     ports:
       - '9092:9092'
@@ -105,6 +103,24 @@ services:
       start_period: 30s
     networks:
       - daltaners-network
+
+  # ──────────────────────────────────────────────
+  # Kafka Topic Initialization (one-shot)
+  # ──────────────────────────────────────────────
+  kafka-init:
+    image: confluentinc/cp-kafka:7.6.0
+    container_name: daltaners-kafka-init
+    depends_on:
+      kafka:
+        condition: service_healthy
+    volumes:
+      - ./docker/init-kafka-topics.sh:/init-kafka-topics.sh:ro
+    entrypoint: ['/bin/bash', '/init-kafka-topics.sh']
+    environment:
+      KAFKA_BOOTSTRAP_SERVER: kafka:29092
+    networks:
+      - daltaners-network
+    restart: 'no'
 
   # ──────────────────────────────────────────────
   # Elasticsearch 8

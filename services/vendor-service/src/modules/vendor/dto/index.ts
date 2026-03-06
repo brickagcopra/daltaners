@@ -6,3 +6,14 @@ export { SetOperatingHoursDto, OperatingHourEntryDto } from './set-operating-hou
 export { CreateStoreStaffDto } from './create-store-staff.dto';
 export { UpdateStoreStaffDto } from './update-store-staff.dto';
 export { NearbyStoresDto } from './nearby-stores.dto';
+export { PerformanceHistoryQueryDto, AdminPerformanceQueryDto } from './performance-query.dto';
+export { CreatePolicyRuleDto, UpdatePolicyRuleDto, PolicyRuleQueryDto } from './policy-rule.dto';
+export {
+  CreateViolationDto,
+  ViolationQueryDto,
+  AdminViolationQueryDto,
+  ApplyPenaltyDto,
+  ResolveViolationDto,
+  DismissViolationDto,
+} from './policy-violation.dto';
+export { CreateAppealDto, AppealQueryDto, AdminAppealQueryDto, ReviewAppealDto, DenyAppealDto } from './appeal.dto';

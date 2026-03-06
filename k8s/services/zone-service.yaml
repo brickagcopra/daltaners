@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zone-service
+  namespace: daltaners
+  labels:
+    app: zone-service
+    app.kubernetes.io/part-of: daltaners
+    app.kubernetes.io/component: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: zone-service
+  template:
+    metadata:
+      labels:
+        app: zone-service
+        app.kubernetes.io/part-of: daltaners
+    spec:
+      serviceAccountName: daltaners-service-account
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app: zone-service
+      containers:
+        - name: zone-service
+          image: daltaners/zone-service:latest
+          ports:
+            - containerPort: 3014
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: daltaners-config
+            - secretRef:
+                name: daltaners-secrets
+          env:
+            - name: PORT
+              value: "3014"
+            - name: DB_SCHEMA
+              value: "zones"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 3014
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3014
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3014
+            periodSeconds: 30
+            failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zone-service
+  namespace: daltaners
+  labels:
+    app: zone-service
+spec:
+  selector:
+    app: zone-service
+  ports:
+    - port: 3014
+      targetPort: 3014
+      protocol: TCP
+  type: ClusterIP

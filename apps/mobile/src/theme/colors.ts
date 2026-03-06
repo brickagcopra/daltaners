@@ -1,0 +1,65 @@
+export const colors = {
+  primary: {
+    50: '#FFF3ED',
+    100: '#FFE4D4',
+    200: '#FFC7A8',
+    300: '#FFA270',
+    400: '#FF7D3D',
+    500: '#FF6B35',
+    600: '#E85520',
+    700: '#C24018',
+    800: '#9A3316',
+    900: '#7C2D14',
+  },
+  secondary: {
+    50: '#E6F0FA',
+    100: '#BFDBF1',
+    200: '#8CC3E6',
+    300: '#59ABD9',
+    400: '#2E92CC',
+    500: '#004E89',
+    600: '#00437A',
+    700: '#003666',
+    800: '#002B52',
+    900: '#001C36',
+  },
+  accent: {
+    50: '#FFFDF0',
+    100: '#FFF9D6',
+    200: '#FFF3AD',
+    300: '#FFED85',
+    400: '#FFE45C',
+    500: '#FFD700',
+    600: '#D4B300',
+    700: '#AA8F00',
+  },
+  success: '#27AE60',
+  warning: '#F2994A',
+  error: '#EB5757',
+  background: '#FAFAFA',
+  surface: '#FFFFFF',
+  text: {
+    primary: '#1A1A1A',
+    secondary: '#666666',
+    muted: '#999999',
+  },
+  border: '#E5E7EB',
+} as const;
+
+export const tierColors = {
+  Bronze: { bg: '#CD7F32', text: '#FFFFFF' },
+  Silver: { bg: '#C0C0C0', text: '#1A1A1A' },
+  Gold: { bg: '#FFD700', text: '#1A1A1A' },
+  Platinum: { bg: '#E5E4E2', text: '#1A1A1A' },
+} as const;
+
+export const statusColors = {
+  pending: { bg: '#FEF3C7', text: '#92400E' },
+  confirmed: { bg: '#DBEAFE', text: '#1E40AF' },
+  preparing: { bg: '#E0E7FF', text: '#3730A3' },
+  ready: { bg: '#D1FAE5', text: '#065F46' },
+  picked_up: { bg: '#CFFAFE', text: '#155E75' },
+  in_transit: { bg: '#FEF9C3', text: '#854D0E' },
+  delivered: { bg: '#D1FAE5', text: '#065F46' },
+  cancelled: { bg: '#FEE2E2', text: '#991B1B' },
+} as const;

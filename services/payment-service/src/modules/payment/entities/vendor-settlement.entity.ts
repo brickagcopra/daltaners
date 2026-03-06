@@ -53,6 +53,15 @@ export class VendorSettlementEntity {
   @Column({ type: 'timestamptz', nullable: true })
   settlement_date: Date | null;
 
+  @Column({ type: 'text', nullable: true })
+  notes: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  approved_by: string | null;
+
+  @Column({ type: 'int', default: 0 })
+  order_count: number;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
 }

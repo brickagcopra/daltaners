@@ -11,15 +11,19 @@ import {
   HttpStatus,
   ParseUUIDPipe,
   RawBodyRequest,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { Request } from 'express';
 import { PaymentService } from './payment.service';
+import { SettlementService } from './settlement.service';
+import { TaxService } from './tax.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { ConfirmPaymentDto } from './dto/confirm-payment.dto';
 import { RefundDto } from './dto/refund.dto';
 import { SettlementQueryDto } from './dto/settlement-query.dto';
 import { WalletTopupDto } from './dto/wallet-topup.dto';
+import { TaxInvoiceQueryDto } from './dto/tax-invoice.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -31,7 +35,11 @@ import { PaginationQueryDto } from '../../common/dto/pagination.dto';
 @ApiTags('Payments')
 @Controller('payments')
 export class PaymentController {
-  constructor(private readonly paymentService: PaymentService) {}
+  constructor(
+    private readonly paymentService: PaymentService,
+    private readonly settlementService: SettlementService,
+    private readonly taxService: TaxService,
+  ) {}
 
   // ── Payment Intent ───────────────────────────────────────────────────
 
@@ -186,6 +194,22 @@ export class PaymentController {
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('vendor_owner', 'vendor_staff', 'admin')
+  @Get('settlements/summary')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get vendor settlement summary (total earned, paid, pending, commission)' })
+  async getSettlementSummary(
+    @CurrentUser() user: { id: string; vendor_id: string | null; role: string },
+    @Query('vendor_id') queryVendorId?: string,
+  ) {
+    const vendorId = user.role === 'admin'
+      ? (queryVendorId || '')
+      : (user.vendor_id || '');
+
+    return this.paymentService.getVendorSettlementSummary(vendorId);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('vendor_owner', 'vendor_staff', 'admin')
   @Get('settlements')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'List vendor settlements' })
@@ -199,5 +223,102 @@ export class PaymentController {
       : (user.vendor_id || '');
 
     return this.paymentService.getSettlements(query, vendorId);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('vendor_owner', 'vendor_staff')
+  @Get('settlements/:id')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get settlement detail with order breakdown (vendor)' })
+  @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
+  async getSettlementDetail(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query() pagination: PaginationQueryDto,
+    @CurrentUser() user: { id: string; vendor_id: string | null },
+  ) {
+    const detail = await this.settlementService.getSettlementDetail(
+      id,
+      pagination.page,
+      pagination.limit,
+    );
+
+    // Authorization: vendors can only view their own settlements
+    if (detail.settlement.vendor_id !== user.vendor_id) {
+      throw new ForbiddenException('You can only view your own settlements');
+    }
+
+    return {
+      success: true,
+      data: detail.settlement,
+      items: detail.items,
+      meta: detail.meta,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  // ── Vendor Tax Endpoints ───────────────────────────────────────────
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('vendor_owner', 'vendor_staff')
+  @Get('tax/invoices')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get vendor tax invoices (EWT certificates)' })
+  async getMyTaxInvoices(
+    @CurrentUser() user: { id: string; vendor_id: string | null },
+    @Query() query: TaxInvoiceQueryDto,
+  ) {
+    if (!user.vendor_id) {
+      throw new ForbiddenException('No vendor associated with this account');
+    }
+    return this.taxService.getVendorInvoices(user.vendor_id, query);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('vendor_owner', 'vendor_staff')
+  @Get('tax/invoices/:id')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get tax invoice detail (vendor)' })
+  @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
+  async getMyTaxInvoice(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: { id: string; vendor_id: string | null },
+  ) {
+    if (!user.vendor_id) {
+      throw new ForbiddenException('No vendor associated with this account');
+    }
+    const invoice = await this.taxService.getInvoiceById(id);
+    if (invoice.vendor_id !== user.vendor_id) {
+      throw new ForbiddenException('You can only view your own tax invoices');
+    }
+    return {
+      success: true,
+      data: invoice,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('vendor_owner', 'vendor_staff')
+  @Get('tax/summary')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get vendor tax summary (total VAT, EWT, commissions)' })
+  async getMyTaxSummary(
+    @CurrentUser() user: { id: string; vendor_id: string | null },
+    @Query('period_start') periodStart?: string,
+    @Query('period_end') periodEnd?: string,
+  ) {
+    if (!user.vendor_id) {
+      throw new ForbiddenException('No vendor associated with this account');
+    }
+    const summary = await this.taxService.getVendorTaxSummary(
+      user.vendor_id,
+      periodStart,
+      periodEnd,
+    );
+    return {
+      success: true,
+      data: summary,
+      timestamp: new Date().toISOString(),
+    };
   }
 }

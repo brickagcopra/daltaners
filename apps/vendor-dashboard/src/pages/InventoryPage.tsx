@@ -83,7 +83,7 @@ export function InventoryPage() {
       ) : (
         <>
           <StockTable
-            items={data?.data || []}
+            items={Array.isArray(data?.data) ? data.data : []}
             onAdjust={handleAdjust}
           />
           {data?.meta && (

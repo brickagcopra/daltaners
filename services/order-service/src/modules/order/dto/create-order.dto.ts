@@ -1,4 +1,4 @@
-import { IsUUID, IsEnum, IsOptional, IsString, IsNumber, IsArray, ValidateNested, Min, IsObject } from 'class-validator';
+import { IsUUID, IsEnum, IsOptional, IsString, IsNumber, IsArray, ValidateNested, Min, IsObject, IsBoolean, IsLatitude, IsLongitude } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -72,6 +72,12 @@ export class CreateOrderDto {
   @IsString()
   coupon_code?: string;
 
+  @ApiPropertyOptional({ description: 'Category UUIDs of items in cart (for coupon category validation)', type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsUUID('4', { each: true })
+  category_ids?: string[];
+
   @ApiPropertyOptional({ description: 'Customer notes for the order' })
   @IsOptional()
   @IsString()
@@ -82,6 +88,26 @@ export class CreateOrderDto {
   @IsNumber()
   @Min(0)
   tip_amount?: number;
+
+  @ApiPropertyOptional({ description: 'Prescription upload UUID (required for pharmacy Rx orders)' })
+  @IsOptional()
+  @IsUUID()
+  prescription_upload_id?: string;
+
+  @ApiPropertyOptional({ description: 'Destination latitude for zone-based delivery fee calculation' })
+  @IsOptional()
+  @IsNumber()
+  destination_lat?: number;
+
+  @ApiPropertyOptional({ description: 'Destination longitude for zone-based delivery fee calculation' })
+  @IsOptional()
+  @IsNumber()
+  destination_lng?: number;
+
+  @ApiPropertyOptional({ description: 'Whether cart contains prescription (Rx) items', default: false })
+  @IsOptional()
+  @IsBoolean()
+  has_rx_items?: boolean;
 
   @ApiProperty({ type: [CreateOrderItemDto], description: 'Order items' })
   @IsArray()

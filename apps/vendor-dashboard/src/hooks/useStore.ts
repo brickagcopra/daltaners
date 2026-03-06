@@ -64,13 +64,16 @@ export interface UpdateStoreData {
   deliveryRadius?: number;
   minimumOrder?: number;
   isActive?: boolean;
+  logo_url?: string | null;
+  banner_url?: string | null;
 }
 
 export function useMyStore() {
   return useQuery({
     queryKey: ['my-store'],
     queryFn: async () => {
-      const { data } = await api.get<ApiResponse<Store>>('/vendor/store');
+      // Uses the vendor controller's GET /vendors/stores/me endpoint
+      const { data } = await api.get<ApiResponse<Store>>('/stores/me');
       return data.data;
     },
   });

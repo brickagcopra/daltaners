@@ -58,8 +58,20 @@ create_topic() {
 create_topic "daltaners.orders.events"          6 1
 create_topic "daltaners.orders.status"          6 1
 
+# ─── Prescriptions Domain ──────────────────────────
+create_topic "daltaners.prescriptions.events"    3 1
+
+# ─── Returns Domain ─────────────────────────────
+create_topic "daltaners.returns.events"          3 1
+
+# ─── Disputes Domain ──────────────────────────────
+create_topic "daltaners.disputes.events"         3 1
+
 # ─── Payment Domain ─────────────────────────────
 create_topic "daltaners.payments.events"        3 1
+
+# ─── Settlements Domain ─────────────────────────
+create_topic "daltaners.settlements.events"     3 1
 
 # ─── Inventory Domain ───────────────────────────
 create_topic "daltaners.inventory.events"       3 1
@@ -67,12 +79,39 @@ create_topic "daltaners.inventory.events"       3 1
 # ─── Delivery Domain ────────────────────────────
 create_topic "daltaners.delivery.tracking"      6 1
 create_topic "daltaners.delivery.assignments"   3 1
+create_topic "daltaners.delivery.events"        6 1
+create_topic "daltaners.delivery.location"      6 1
 
 # ─── Notification Domain ────────────────────────
 create_topic "daltaners.notifications.outbound" 3 1
 
 # ─── User Domain ────────────────────────────────
 create_topic "daltaners.users.events"           3 1
+
+# ─── Catalog Domain ───────────────────────────
+create_topic "daltaners.catalog.events"         3 1
+
+# ─── Loyalty Domain ────────────────────────────
+create_topic "daltaners.loyalty.events"         3 1
+
+# ─── Chat Domain ──────────────────────────────
+create_topic "daltaners.chat.events"            3 1
+
+# ─── POS Domain ───────────────────────────────
+create_topic "daltaners.pos.events"             3 1
+
+# ─── Policy Domain ──────────────────────────────
+create_topic "daltaners.policy.events"          3 1
+
+# ─── Shipping Domain ──────────────────────────────
+create_topic "daltaners.shipping.events"        3 1
+
+# ─── Tax & Compliance Domain ─────────────────────
+create_topic "daltaners.tax.events"             3 1
+
+# ─── Dynamic Pricing Domain ─────────────────────
+create_topic "daltaners.pricing.events"         3 1
+create_topic "daltaners.advertising.events"     3 1
 
 echo ""
 echo "---------------------------------------------"

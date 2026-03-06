@@ -11,7 +11,13 @@ import {
 import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 
-@WebSocketGateway({ cors: { origin: '*' }, namespace: '/delivery' })
+@WebSocketGateway({
+  cors: {
+    origin: process.env.NODE_ENV === 'development' ? true : (process.env.CORS_ORIGINS || '').split(','),
+    credentials: true,
+  },
+  namespace: '/delivery',
+})
 export class DeliveryGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;

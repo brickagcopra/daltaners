@@ -4,11 +4,12 @@
 
 @layer base {
   * {
-    @apply border-border;
+    border-color: #E2E8F0;
   }
 
   body {
-    @apply bg-background text-foreground;
+    background-color: #F8FAFC;
+    color: #0F172A;
   }
 
   ::-webkit-scrollbar {
@@ -16,35 +17,44 @@
   }
 
   ::-webkit-scrollbar-track {
-    @apply bg-muted;
+    background-color: #F1F5F9;
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-muted-foreground/30 rounded-full;
+    background-color: rgba(100, 116, 139, 0.3);
+    @apply rounded-full;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-muted-foreground/50;
+    background-color: rgba(100, 116, 139, 0.5);
   }
 }
 
 @layer components {
   .admin-sidebar {
-    @apply bg-sidebar-bg text-sidebar-text min-h-screen;
+    background-color: #0F172A;
+    color: #94A3B8;
+    @apply min-h-screen;
   }
 
   .admin-sidebar-item {
+    color: #94A3B8;
     @apply flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium
-           text-sidebar-text hover:bg-sidebar-hover hover:text-sidebar-text-active
            transition-colors duration-200;
   }
 
+  .admin-sidebar-item:hover {
+    background-color: #1E293B;
+    color: #FFFFFF;
+  }
+
   .admin-sidebar-item.active {
-    @apply bg-sidebar-active text-sidebar-text-active;
+    background-color: #334155;
+    color: #FFFFFF;
   }
 
   .stat-card {
-    @apply bg-white rounded-xl border border-border p-6 shadow-sm
+    @apply bg-white rounded-xl border border-[#E2E8F0] p-6 shadow-sm
            hover:shadow-md transition-shadow duration-200;
   }
 
@@ -53,16 +63,18 @@
   }
 
   .data-table th {
-    @apply text-left font-semibold text-muted-foreground px-4 py-3
-           border-b border-border bg-muted/50 first:rounded-tl-lg last:rounded-tr-lg;
+    color: #64748B;
+    background-color: rgba(241, 245, 249, 0.5);
+    @apply text-left font-semibold px-4 py-3
+           border-b border-[#E2E8F0] first:rounded-tl-lg last:rounded-tr-lg;
   }
 
   .data-table td {
-    @apply px-4 py-3 border-b border-border;
+    @apply px-4 py-3 border-b border-[#E2E8F0];
   }
 
   .data-table tr:hover td {
-    @apply bg-muted/30;
+    background-color: rgba(241, 245, 249, 0.3);
   }
 
   .data-table tr:last-child td {

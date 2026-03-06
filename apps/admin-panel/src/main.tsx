@@ -7,9 +7,14 @@ import App from '@/App';
 import '@/globals.css';
 
 async function enableMocking() {
-  if (import.meta.env.MODE !== 'development') return;
-  const { worker } = await import('@daltaners/mock-data/browser');
-  return worker.start({ onUnhandledRequest: 'bypass' });
+  if (import.meta.env.VITE_ENABLE_MSW !== 'true') return;
+  try {
+    const { worker } = await import('@daltaners/mock-data/browser');
+    await worker.start({ onUnhandledRequest: 'bypass' });
+    console.log('[MSW] Mock Service Worker started');
+  } catch (err) {
+    console.warn('[MSW] Failed to start Mock Service Worker:', err);
+  }
 }
 
 enableMocking().then(() => {

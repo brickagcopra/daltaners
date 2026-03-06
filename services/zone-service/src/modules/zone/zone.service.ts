@@ -121,6 +121,14 @@ export class ZoneService {
     await this.zoneRepository.decrementCapacity(zoneId);
   }
 
+  async getAvailableCities(): Promise<{ city: string; province: string; region: string }[]> {
+    return this.zoneRepository.findDistinctCities();
+  }
+
+  async findZonesByCity(city: string): Promise<DeliveryZoneEntity[]> {
+    return this.zoneRepository.findZonesByCity(city);
+  }
+
   private calculateDistanceKm(
     lat1: number,
     lng1: number,

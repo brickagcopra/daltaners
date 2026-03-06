@@ -241,6 +241,57 @@ services:
     networks:
       - daltaners-network
 
+  loyalty-service:
+    build:
+      context: .
+      dockerfile: services/loyalty-service/Dockerfile
+    image: daltaners/loyalty-service:latest
+    container_name: daltaners-loyalty-service
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_HOST: daltaners-postgres
+      REDIS_HOST: daltaners-redis
+      KAFKA_BROKERS: daltaners-kafka:29092
+    ports:
+      - '3017:3017'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - daltaners-network
+
+  chat-service:
+    build:
+      context: .
+      dockerfile: services/chat-service/Dockerfile
+    image: daltaners/chat-service:latest
+    container_name: daltaners-chat-service
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_HOST: daltaners-postgres
+      REDIS_HOST: daltaners-redis
+      KAFKA_BROKERS: daltaners-kafka:29092
+      CASSANDRA_CONTACT_POINTS: daltaners-cassandra
+    ports:
+      - '3013:3013'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      cassandra:
+        condition: service_healthy
+    networks:
+      - daltaners-network
+
   zone-service:
     build:
       context: .
@@ -255,6 +306,30 @@ services:
       KAFKA_BROKERS: daltaners-kafka:29092
     ports:
       - '3014:3014'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - daltaners-network
+
+  pos-service:
+    build:
+      context: .
+      dockerfile: services/pos-service/Dockerfile
+    image: daltaners/pos-service:latest
+    container_name: daltaners-pos-service
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_HOST: daltaners-postgres
+      REDIS_HOST: daltaners-redis
+      KAFKA_BROKERS: daltaners-kafka:29092
+    ports:
+      - '3015:3015'
     depends_on:
       postgres:
         condition: service_healthy
@@ -296,6 +371,30 @@ services:
     depends_on:
       auth-service:
         condition: service_started
+    networks:
+      - daltaners-network
+
+  advertising-service:
+    build:
+      context: .
+      dockerfile: services/advertising-service/Dockerfile
+    image: daltaners/advertising-service:latest
+    container_name: daltaners-advertising-service
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_HOST: daltaners-postgres
+      REDIS_HOST: daltaners-redis
+      KAFKA_BROKERS: daltaners-kafka:29092
+    ports:
+      - '3019:3019'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
     networks:
       - daltaners-network
 

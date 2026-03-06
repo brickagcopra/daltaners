@@ -13,6 +13,7 @@ const STATUS_CONFIG: Record<OrderStatus, { label: string; color: string }> = {
   ready_for_pickup: { label: 'Ready for Pickup', color: 'text-accent-600' },
   picked_up: { label: 'Picked Up', color: 'text-accent-600' },
   on_the_way: { label: 'On the Way', color: 'text-primary' },
+  in_transit: { label: 'In Transit', color: 'text-primary' },
   delivered: { label: 'Delivered', color: 'text-success' },
   cancelled: { label: 'Cancelled', color: 'text-destructive' },
 };
@@ -24,6 +25,7 @@ const ACTIVE_STATUSES: OrderStatus[] = [
   'ready_for_pickup',
   'picked_up',
   'on_the_way',
+  'in_transit',
   'delivered',
 ];
 

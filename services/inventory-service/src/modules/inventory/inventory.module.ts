@@ -6,6 +6,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { StockEntity } from './entities/stock.entity';
 import { StockMovementEntity } from './entities/stock-movement.entity';
 import { InventoryController } from './inventory.controller';
+import { AdminInventoryController } from './admin.controller';
 import { InventoryService } from './inventory.service';
 import { InventoryRepository } from './inventory.repository';
 import { RedisService } from './redis.service';
@@ -22,12 +23,12 @@ import { JwtStrategy } from './jwt.strategy';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        secret: config.get<string>('JWT_SECRET', 'daltaners-jwt-secret-dev'),
+        secret: config.get<string>('JWT_SECRET', 'daltaners_jwt_secret_dev'),
         signOptions: { expiresIn: '15m' },
       }),
     }),
   ],
-  controllers: [InventoryController],
+  controllers: [InventoryController, AdminInventoryController],
   providers: [
     InventoryService,
     InventoryRepository,

@@ -19,7 +19,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: configService.get<string>('JWT_SECRET', 'daltaners-jwt-secret-dev'),
+      secretOrKey: configService.get<string>('JWT_SECRET', 'daltaners_jwt_secret_dev'),
     });
   }
 

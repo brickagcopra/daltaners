@@ -63,7 +63,9 @@ export const ordersHandlers = [
     });
 
     const subtotal = orderItems.reduce((s, i) => s + i.total_price, 0);
-    const deliveryFee = (body.delivery_fee as number) ?? 49;
+    const orderType = (body.order_type as string) ?? 'delivery';
+    const isPickup = orderType === 'pickup';
+    const deliveryFee = isPickup ? 0 : ((body.delivery_fee as number) ?? 49);
     const serviceFee = 15;
     const tax = +(subtotal * 0.12).toFixed(2);
 
@@ -74,10 +76,11 @@ export const ordersHandlers = [
       store_id: body.store_id,
       store_location_id: body.store_location_id,
       status: 'pending',
-      order_type: body.order_type ?? 'delivery',
+      order_type: orderType,
       service_type: body.service_type ?? 'grocery',
-      delivery_type: body.delivery_type ?? 'standard',
-      scheduled_at: null,
+      delivery_type: isPickup ? null : (body.delivery_type ?? 'standard'),
+      scheduled_at: (body.scheduled_at as string) ?? null,
+      picked_up_at: null,
       subtotal,
       delivery_fee: deliveryFee,
       service_fee: serviceFee,
@@ -87,14 +90,14 @@ export const ordersHandlers = [
       total_amount: subtotal + deliveryFee + serviceFee + tax,
       payment_method: body.payment_method ?? 'gcash',
       payment_status: 'pending',
-      delivery_address: body.delivery_address ?? null,
+      delivery_address: isPickup ? null : (body.delivery_address ?? null),
       delivery_instructions: body.delivery_instructions ?? null,
       substitution_policy: body.substitution_policy ?? 'accept_similar',
       coupon_id: null,
       coupon_code: body.coupon_code ?? null,
       customer_notes: body.customer_notes ?? null,
       cancellation_reason: null,
-      estimated_delivery_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+      estimated_delivery_at: isPickup ? null : new Date(Date.now() + 60 * 60 * 1000).toISOString(),
       actual_delivery_at: null,
       items: orderItems.map((i) => ({ ...i, order_id: `ord-${Date.now()}` })),
       created_at: new Date().toISOString(),

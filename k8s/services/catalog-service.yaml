@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalog-service
+  namespace: daltaners
+  labels:
+    app: catalog-service
+    app.kubernetes.io/part-of: daltaners
+    app.kubernetes.io/component: backend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: catalog-service
+  template:
+    metadata:
+      labels:
+        app: catalog-service
+        app.kubernetes.io/part-of: daltaners
+    spec:
+      serviceAccountName: daltaners-service-account
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app: catalog-service
+      containers:
+        - name: catalog-service
+          image: daltaners/catalog-service:latest
+          ports:
+            - containerPort: 3004
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: daltaners-config
+            - secretRef:
+                name: daltaners-secrets
+          env:
+            - name: PORT
+              value: "3004"
+            - name: DB_SCHEMA
+              value: "catalog"
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 3004
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3004
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3004
+            periodSeconds: 30
+            failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: catalog-service
+  namespace: daltaners
+  labels:
+    app: catalog-service
+spec:
+  selector:
+    app: catalog-service
+  ports:
+    - port: 3004
+      targetPort: 3004
+      protocol: TCP
+  type: ClusterIP

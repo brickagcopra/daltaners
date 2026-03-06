@@ -118,7 +118,7 @@ export function CategoriesPage() {
       {/* Category Tree */}
       <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
         <CategoryTree
-          categories={data?.data || []}
+          categories={Array.isArray(data?.data) ? data.data : []}
           onAdd={handleAddCategory}
           onEdit={handleEditCategory}
           onDelete={(category) => setDeleteCategory(category)}

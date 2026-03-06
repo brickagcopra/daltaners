@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+  namespace: daltaners
+  labels:
+    app: order-service
+    app.kubernetes.io/part-of: daltaners
+    app.kubernetes.io/component: backend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: order-service
+  template:
+    metadata:
+      labels:
+        app: order-service
+        app.kubernetes.io/part-of: daltaners
+    spec:
+      serviceAccountName: daltaners-service-account
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app: order-service
+      containers:
+        - name: order-service
+          image: daltaners/order-service:latest
+          ports:
+            - containerPort: 3006
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: daltaners-config
+            - secretRef:
+                name: daltaners-secrets
+          env:
+            - name: PORT
+              value: "3006"
+            - name: DB_SCHEMA
+              value: "orders"
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 3006
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3006
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3006
+            periodSeconds: 30
+            failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-service
+  namespace: daltaners
+  labels:
+    app: order-service
+spec:
+  selector:
+    app: order-service
+  ports:
+    - port: 3006
+      targetPort: 3006
+      protocol: TCP
+  type: ClusterIP

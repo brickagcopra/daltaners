@@ -66,11 +66,16 @@ export class CreateProductDto {
   @MaxLength(100)
   barcode?: string;
 
-  @ApiPropertyOptional({ description: 'Brand name', maxLength: 255 })
+  @ApiPropertyOptional({ description: 'Brand name (legacy text field)', maxLength: 255 })
   @IsOptional()
   @IsString()
   @MaxLength(255)
   brand?: string;
+
+  @ApiPropertyOptional({ description: 'Brand ID from brand registry' })
+  @IsOptional()
+  @IsUUID()
+  brand_id?: string;
 
   @ApiPropertyOptional({ description: 'Unit type', enum: UnitType })
   @IsOptional()

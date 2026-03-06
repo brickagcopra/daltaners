@@ -28,14 +28,14 @@ export function VendorTable({ vendors, isLoading, onApprove, onSuspend }: Vendor
       render: (vendor) => (
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary/10 text-sm font-bold text-secondary">
-            {vendor.storeName.charAt(0).toUpperCase()}
+            {vendor.name.charAt(0).toUpperCase()}
           </div>
           <div>
             <p
               className="cursor-pointer font-medium text-foreground hover:text-primary transition-colors"
               onClick={() => navigate(`/vendors/${vendor.id}`)}
             >
-              {vendor.storeName}
+              {vendor.name}
             </p>
             <p className="text-xs text-muted-foreground">{vendor.category}</p>
           </div>
@@ -43,12 +43,12 @@ export function VendorTable({ vendors, isLoading, onApprove, onSuspend }: Vendor
       ),
     },
     {
-      key: 'owner',
-      header: 'Owner',
+      key: 'contact',
+      header: 'Contact',
       render: (vendor) => (
         <div>
-          <p className="text-sm font-medium text-foreground">{vendor.ownerName}</p>
-          <p className="text-xs text-muted-foreground">{vendor.ownerEmail}</p>
+          <p className="text-sm font-medium text-foreground">{vendor.contact_email || '—'}</p>
+          <p className="text-xs text-muted-foreground">{vendor.contact_phone || '—'}</p>
         </div>
       ),
     },
@@ -70,7 +70,7 @@ export function VendorTable({ vendors, isLoading, onApprove, onSuspend }: Vendor
             <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
           </svg>
           <span className="text-sm font-medium text-foreground">
-            {vendor.rating.toFixed(1)}
+            {vendor.rating_average.toFixed(1)}
           </span>
         </div>
       ),
@@ -79,16 +79,7 @@ export function VendorTable({ vendors, isLoading, onApprove, onSuspend }: Vendor
       key: 'orders',
       header: 'Total Orders',
       render: (vendor) => (
-        <span className="text-sm text-foreground">{vendor.totalOrders.toLocaleString()}</span>
-      ),
-    },
-    {
-      key: 'revenue',
-      header: 'Revenue',
-      render: (vendor) => (
-        <span className="text-sm font-medium text-foreground">
-          P{(vendor.totalRevenue / 100).toLocaleString('en-PH', { minimumFractionDigits: 2 })}
-        </span>
+        <span className="text-sm text-foreground">{vendor.total_orders.toLocaleString()}</span>
       ),
     },
     {

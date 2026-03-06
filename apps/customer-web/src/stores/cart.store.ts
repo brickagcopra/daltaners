@@ -9,11 +9,15 @@ interface CartItem {
   image_url: string;
   price: number;
   quantity: number;
+  special_instructions?: string;
+  dietary_tags?: string[];
+  allergens?: string[];
 }
 
 interface CartState {
   items: CartItem[];
   addItem: (item: Omit<CartItem, 'quantity'>) => void;
+  addItemWithQuantity: (item: CartItem) => void;
   removeItem: (productId: string, variantId?: string) => void;
   updateQuantity: (productId: string, quantity: number, variantId?: string) => void;
   clearCart: () => void;
@@ -42,6 +46,22 @@ export const useCartStore = create<CartState>()(
             };
           }
           return { items: [...state.items, { ...item, quantity: 1 }] };
+        }),
+      addItemWithQuantity: (item) =>
+        set((state) => {
+          const existing = state.items.find(
+            (i) => i.product_id === item.product_id && i.variant_id === item.variant_id,
+          );
+          if (existing) {
+            return {
+              items: state.items.map((i) =>
+                i.product_id === item.product_id && i.variant_id === item.variant_id
+                  ? { ...i, quantity: i.quantity + item.quantity }
+                  : i,
+              ),
+            };
+          }
+          return { items: [...state.items, item] };
         }),
       removeItem: (productId, variantId) =>
         set((state) => ({

@@ -6,16 +6,20 @@ import {
 } from '@nestjs/common';
 import { OrderService } from '../order.service';
 import { OrderRepository } from '../order.repository';
+import { CouponService } from '../coupon.service';
 import { RedisService } from '../redis.service';
 import { KafkaProducerService } from '../kafka-producer.service';
+import { ZoneClientService } from '../zone-client.service';
 import { OrderEntity } from '../entities/order.entity';
 import { OrderItemEntity } from '../entities/order-item.entity';
 
 describe('OrderService', () => {
   let service: OrderService;
   let orderRepo: jest.Mocked<OrderRepository>;
+  let couponService: jest.Mocked<CouponService>;
   let redisService: jest.Mocked<RedisService>;
   let kafkaProducer: jest.Mocked<KafkaProducerService>;
+  let zoneClient: jest.Mocked<ZoneClientService>;
 
   const mockItems: Partial<OrderItemEntity>[] = [
     {
@@ -97,19 +101,43 @@ describe('OrderService', () => {
       publish: jest.fn(),
     };
 
+    const mockCouponService = {
+      validateCoupon: jest.fn(),
+      redeemCoupon: jest.fn(),
+      releaseCoupon: jest.fn(),
+      getCouponByCode: jest.fn(),
+      calculateDiscount: jest.fn(),
+      createCoupon: jest.fn(),
+      getCouponById: jest.fn(),
+      listCoupons: jest.fn(),
+      updateCoupon: jest.fn(),
+      deleteCoupon: jest.fn(),
+    };
+
+    const mockZoneClient = {
+      calculateDeliveryFee: jest.fn().mockResolvedValue(49.0),
+      getStaticFee: jest.fn().mockReturnValue(49.0),
+      isCircuitOpen: jest.fn().mockReturnValue(false),
+      resetCircuitBreaker: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         OrderService,
         { provide: OrderRepository, useValue: mockOrderRepo },
+        { provide: CouponService, useValue: mockCouponService },
         { provide: RedisService, useValue: mockRedisService },
         { provide: KafkaProducerService, useValue: mockKafkaProducer },
+        { provide: ZoneClientService, useValue: mockZoneClient },
       ],
     }).compile();
 
     service = module.get<OrderService>(OrderService);
     orderRepo = module.get(OrderRepository);
+    couponService = module.get(CouponService);
     redisService = module.get(RedisService);
     kafkaProducer = module.get(KafkaProducerService);
+    zoneClient = module.get(ZoneClientService);
   });
 
   afterEach(() => {
@@ -117,11 +145,12 @@ describe('OrderService', () => {
   });
 
   describe('createOrder', () => {
+    // Use pharmacy (₱0 minimum) since item prices are placeholder zeros in tests
     const createDto = {
       store_id: 'store-uuid-1',
       store_location_id: 'location-uuid-1',
       order_type: 'delivery' as const,
-      service_type: 'grocery' as const,
+      service_type: 'pharmacy' as const,
       delivery_type: 'standard' as const,
       payment_method: 'gcash' as const,
       delivery_address: { street: '123 Rizal St', city: 'Manila' },
@@ -168,10 +197,11 @@ describe('OrderService', () => {
       expect(createCall[0]).toEqual(expect.objectContaining({ delivery_fee: 0 }));
     });
 
-    it('should set delivery_fee based on delivery_type', async () => {
+    it('should set delivery_fee based on delivery_type via zone client', async () => {
       const expressDto = { ...createDto, delivery_type: 'express' as const };
       orderRepo.orderNumberExists.mockResolvedValue(false);
       orderRepo.createOrder.mockResolvedValue(mockOrder as OrderEntity);
+      zoneClient.calculateDeliveryFee.mockResolvedValue(79.0);
 
       await service.createOrder('customer-uuid-1', expressDto as any);
 
@@ -309,6 +339,7 @@ describe('OrderService', () => {
       const cancelledOrder = { ...mockOrder, status: 'cancelled', cancellation_reason: 'Changed my mind' };
       orderRepo.findOrderById.mockResolvedValue(mockOrder as OrderEntity);
       orderRepo.updateOrderStatus.mockResolvedValue(cancelledOrder as OrderEntity);
+      couponService.releaseCoupon.mockResolvedValue(undefined);
       redisService.del.mockResolvedValue(undefined);
       kafkaProducer.publish.mockResolvedValue(undefined);
 
@@ -328,6 +359,7 @@ describe('OrderService', () => {
           payment_status: 'cancelled',
         }),
       );
+      expect(couponService.releaseCoupon).toHaveBeenCalledWith('order-uuid-1');
       expect(redisService.del).toHaveBeenCalledWith('order:detail:order-uuid-1');
       expect(kafkaProducer.publish).toHaveBeenCalledWith(
         'daltaners.orders.events',
@@ -345,6 +377,7 @@ describe('OrderService', () => {
         status: 'cancelled',
         payment_status: 'refund_pending',
       } as OrderEntity);
+      couponService.releaseCoupon.mockResolvedValue(undefined);
 
       await service.cancelOrder('order-uuid-1', 'customer-uuid-1', 'customer');
 
@@ -562,6 +595,7 @@ describe('OrderService', () => {
     it('should cancel order when payment fails', async () => {
       orderRepo.findOrderById.mockResolvedValue(mockOrder as OrderEntity);
       orderRepo.updateOrderStatus.mockResolvedValue(null);
+      couponService.releaseCoupon.mockResolvedValue(undefined);
       redisService.del.mockResolvedValue(undefined);
       kafkaProducer.publish.mockResolvedValue(undefined);
 

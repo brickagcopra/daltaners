@@ -4,6 +4,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthController } from './auth.controller';
+import { AdminController } from './admin.controller';
 import { AuthService } from './auth.service';
 import { AuthRepository } from './auth.repository';
 import { RedisService } from './redis.service';
@@ -21,12 +22,12 @@ import { KafkaProducerService } from './kafka-producer.service';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        secret: config.get('JWT_SECRET', 'change-this-to-a-strong-secret-in-production'),
+        secret: config.get('JWT_SECRET', 'daltaners_jwt_secret_dev'),
         signOptions: { expiresIn: '15m' },
       }),
     }),
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, AdminController],
   providers: [AuthService, AuthRepository, RedisService, JwtStrategy, KafkaProducerService],
   exports: [AuthService, RedisService],
 })

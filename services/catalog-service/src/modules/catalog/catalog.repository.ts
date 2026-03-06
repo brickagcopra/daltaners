@@ -187,11 +187,21 @@ export class CatalogRepository {
     }
 
     if (query.category_id) {
-      qb.andWhere('product.category_id = :categoryId', { categoryId: query.category_id });
+      // Include products from child categories so clicking a parent category
+      // also returns products assigned to its sub-categories.
+      qb.andWhere(
+        '(product.category_id = :categoryId OR product.category_id IN ' +
+        '(SELECT id FROM catalog.categories WHERE parent_id = :categoryId))',
+        { categoryId: query.category_id },
+      );
     }
 
     if (query.brand) {
       qb.andWhere('product.brand = :brand', { brand: query.brand });
+    }
+
+    if (query.brand_id) {
+      qb.andWhere('product.brand_id = :brandId', { brandId: query.brand_id });
     }
 
     if (query.min_price !== undefined) {
@@ -374,6 +384,16 @@ export class CatalogRepository {
   async deleteVariant(variantId: string): Promise<boolean> {
     const result = await this.productVariantRepo.delete(variantId);
     return (result.affected ?? 0) > 0;
+  }
+
+  // ─── Indexing Helpers ────────────────────────────────────────────────
+
+  async findAllProductsForIndexing(): Promise<ProductEntity[]> {
+    return this.productRepo.find({
+      where: { is_active: true },
+      relations: ['category', 'images'],
+      order: { created_at: 'ASC' },
+    });
   }
 
   // ─── Cursor Helpers ───────────────────────────────────────────────────

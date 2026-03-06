@@ -72,7 +72,7 @@ export function useStoreProducts(storeId: string | null, filters: ProductFilters
       if (filters.isActive !== undefined) params.set('isActive', String(filters.isActive));
 
       const { data } = await api.get<ApiResponse<Product[]>>(
-        `/stores/${storeId}/products?${params.toString()}`,
+        `/catalog/stores/${storeId}/products?${params.toString()}`,
       );
       return data;
     },
@@ -84,7 +84,7 @@ export function useProduct(productId: string | undefined) {
   return useQuery({
     queryKey: ['product', productId],
     queryFn: async () => {
-      const { data } = await api.get<ApiResponse<Product>>(`/products/${productId}`);
+      const { data } = await api.get<ApiResponse<Product>>(`/catalog/products/${productId}`);
       return data.data;
     },
     enabled: !!productId,
@@ -97,7 +97,7 @@ export function useCreateProduct() {
   return useMutation({
     mutationFn: async ({ storeId, formData }: { storeId: string; formData: FormData }) => {
       const { data } = await api.post<ApiResponse<Product>>(
-        `/stores/${storeId}/products`,
+        `/catalog/stores/${storeId}/products`,
         formData,
         {
           headers: { 'Content-Type': 'multipart/form-data' },
@@ -117,7 +117,7 @@ export function useUpdateProduct() {
   return useMutation({
     mutationFn: async ({ productId, formData }: { productId: string; formData: FormData }) => {
       const { data } = await api.patch<ApiResponse<Product>>(
-        `/products/${productId}`,
+        `/catalog/products/${productId}`,
         formData,
         {
           headers: { 'Content-Type': 'multipart/form-data' },
@@ -137,7 +137,7 @@ export function useDeleteProduct() {
 
   return useMutation({
     mutationFn: async (productId: string) => {
-      await api.delete(`/products/${productId}`);
+      await api.delete(`/catalog/products/${productId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['store-products'] });

@@ -37,13 +37,14 @@ export function useStockLevels(storeId: string | null, filters: StockFilters = {
     queryKey: ['stock-levels', storeId, filters],
     queryFn: async () => {
       const params = new URLSearchParams();
+      params.set('store_id', storeId!);
       if (filters.page) params.set('page', String(filters.page));
       if (filters.limit) params.set('limit', String(filters.limit));
       if (filters.search) params.set('search', filters.search);
       if (filters.lowStockOnly) params.set('lowStockOnly', 'true');
 
       const { data } = await api.get<ApiResponse<StockItem[]>>(
-        `/stores/${storeId}/inventory?${params.toString()}`,
+        `/inventory/stock?${params.toString()}`,
       );
       return data;
     },
@@ -63,8 +64,8 @@ export function useAdjustStock() {
       adjustment: StockAdjustment;
     }) => {
       const { data } = await api.post<ApiResponse<StockItem>>(
-        `/stores/${storeId}/inventory/adjust`,
-        adjustment,
+        `/inventory/stock/adjust`,
+        { ...adjustment, store_id: storeId },
       );
       return data.data;
     },

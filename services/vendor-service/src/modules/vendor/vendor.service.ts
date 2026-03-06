@@ -16,6 +16,7 @@ import { UpdateStoreLocationDto } from './dto/update-store-location.dto';
 import { SetOperatingHoursDto } from './dto/set-operating-hours.dto';
 import { CreateStoreStaffDto } from './dto/create-store-staff.dto';
 import { UpdateStoreStaffDto } from './dto/update-store-staff.dto';
+import { AdminVendorQueryDto, AdminVendorActionDto, AdminVendorUpdateDto } from './dto/admin-vendor-query.dto';
 import { Store } from './entities/store.entity';
 import { StoreLocation } from './entities/store-location.entity';
 import { OperatingHours } from './entities/operating-hours.entity';
@@ -90,6 +91,22 @@ export class VendorService {
     const store = await this.vendorRepository.findStoreById(id);
     if (!store) {
       throw new NotFoundException(`Store with ID ${id} not found`);
+    }
+    return store;
+  }
+
+  async findStoreBySlug(slug: string): Promise<Store> {
+    const store = await this.vendorRepository.findStoreBySlug(slug);
+    if (!store) {
+      throw new NotFoundException(`Store with slug '${slug}' not found`);
+    }
+    return store;
+  }
+
+  async findMyStore(userId: string): Promise<Store> {
+    const store = await this.vendorRepository.findStoreForUser(userId);
+    if (!store) {
+      throw new NotFoundException('No store associated with this account');
     }
     return store;
   }
@@ -298,5 +315,171 @@ export class VendorService {
     await this.vendorRepository.removeStaff(staffId);
 
     this.logger.log(`Staff removed: ${staffId}`);
+  }
+
+  // ─── Admin Methods ──────────────────────────────────────────────────────────
+
+  async adminListStores(query: AdminVendorQueryDto) {
+    const result = await this.vendorRepository.findAllStoresAdmin(query);
+    return {
+      success: true,
+      data: result.items,
+      meta: {
+        page: result.page,
+        limit: result.limit,
+        total: result.total,
+        totalPages: result.totalPages,
+      },
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  async adminGetStore(id: string) {
+    const store = await this.vendorRepository.findStoreById(id);
+    if (!store) {
+      throw new NotFoundException(`Store with ID ${id} not found`);
+    }
+    return {
+      success: true,
+      data: store,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  async adminGetStats() {
+    const stats = await this.vendorRepository.getVendorStats();
+    return {
+      success: true,
+      data: stats,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  async adminApproveStore(id: string, dto: AdminVendorActionDto) {
+    const store = await this.vendorRepository.findStoreById(id);
+    if (!store) {
+      throw new NotFoundException(`Store with ID ${id} not found`);
+    }
+
+    const updateData: Partial<Store> = { status: 'active' as any };
+    if (dto.commission_rate !== undefined) {
+      updateData.commission_rate = dto.commission_rate;
+    }
+
+    const updated = await this.vendorRepository.updateStoreStatus(id, 'active', {
+      approved_at: new Date().toISOString(),
+      approval_reason: dto.reason || 'Approved by admin',
+    });
+
+    if (dto.commission_rate !== undefined && updated) {
+      await this.vendorRepository.adminUpdateStore(id, { commission_rate: dto.commission_rate });
+    }
+
+    // Publish event
+    try {
+      await this.kafkaProducer.publish(VENDOR_EVENTS.STORE_UPDATED, {
+        key: id,
+        value: JSON.stringify({
+          specversion: '1.0',
+          id: uuidv4(),
+          source: 'daltaners/vendor-service',
+          type: 'com.daltaners.vendors.store-approved',
+          datacontenttype: 'application/json',
+          time: new Date().toISOString(),
+          data: { store_id: id, status: 'active' },
+        }),
+      });
+    } catch (error) {
+      this.logger.error(`Failed to publish store-approved event for ${id}`, (error as Error).stack);
+    }
+
+    this.logger.log(`Store approved by admin: ${id}`);
+    const finalStore = await this.vendorRepository.findStoreById(id);
+    return {
+      success: true,
+      data: finalStore,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  async adminSuspendStore(id: string, dto: AdminVendorActionDto) {
+    const store = await this.vendorRepository.findStoreById(id);
+    if (!store) {
+      throw new NotFoundException(`Store with ID ${id} not found`);
+    }
+
+    await this.vendorRepository.updateStoreStatus(id, 'suspended', {
+      suspended_at: new Date().toISOString(),
+      suspension_reason: dto.reason || 'Suspended by admin',
+    });
+
+    // Publish event
+    try {
+      await this.kafkaProducer.publish(VENDOR_EVENTS.STORE_UPDATED, {
+        key: id,
+        value: JSON.stringify({
+          specversion: '1.0',
+          id: uuidv4(),
+          source: 'daltaners/vendor-service',
+          type: 'com.daltaners.vendors.store-suspended',
+          datacontenttype: 'application/json',
+          time: new Date().toISOString(),
+          data: { store_id: id, status: 'suspended', reason: dto.reason },
+        }),
+      });
+    } catch (error) {
+      this.logger.error(`Failed to publish store-suspended event for ${id}`, (error as Error).stack);
+    }
+
+    this.logger.log(`Store suspended by admin: ${id}, reason: ${dto.reason || 'N/A'}`);
+    const updatedStore = await this.vendorRepository.findStoreById(id);
+    return {
+      success: true,
+      data: updatedStore,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  async adminReactivateStore(id: string) {
+    const store = await this.vendorRepository.findStoreById(id);
+    if (!store) {
+      throw new NotFoundException(`Store with ID ${id} not found`);
+    }
+
+    await this.vendorRepository.updateStoreStatus(id, 'active', {
+      reactivated_at: new Date().toISOString(),
+    });
+
+    this.logger.log(`Store reactivated by admin: ${id}`);
+    const updatedStore = await this.vendorRepository.findStoreById(id);
+    return {
+      success: true,
+      data: updatedStore,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  async adminUpdateStore(id: string, dto: AdminVendorUpdateDto) {
+    const store = await this.vendorRepository.findStoreById(id);
+    if (!store) {
+      throw new NotFoundException(`Store with ID ${id} not found`);
+    }
+
+    const updateData: Partial<Store> = {};
+    if (dto.commission_rate !== undefined) updateData.commission_rate = dto.commission_rate;
+    if (dto.subscription_tier !== undefined) updateData.subscription_tier = dto.subscription_tier as any;
+    if (dto.is_featured !== undefined) updateData.is_featured = dto.is_featured;
+
+    if (Object.keys(updateData).length > 0) {
+      await this.vendorRepository.adminUpdateStore(id, updateData);
+    }
+
+    this.logger.log(`Store admin-updated: ${id}, fields: ${Object.keys(updateData).join(', ')}`);
+    const updatedStore = await this.vendorRepository.findStoreById(id);
+    return {
+      success: true,
+      data: updatedStore,
+      timestamp: new Date().toISOString(),
+    };
   }
 }

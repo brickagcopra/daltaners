@@ -5,11 +5,11 @@ import { RevenueChart } from '@/components/dashboard/RevenueChart';
 import { RecentOrdersWidget } from '@/components/dashboard/RecentOrdersWidget';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 
-function formatCurrency(amount: number): string {
+function formatCurrency(amount: number | undefined | null): string {
   return new Intl.NumberFormat('en-PH', {
     style: 'currency',
     currency: 'PHP',
-  }).format(amount);
+  }).format(amount ?? 0);
 }
 
 export function DashboardPage() {
@@ -75,13 +75,37 @@ export function DashboardPage() {
         />
       </div>
 
+      {/* Service Type Breakdown */}
+      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <h3 className="text-sm font-semibold text-gray-900 mb-4">Orders by Service Type</h3>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          {[
+            { label: 'Grocery', key: 'grocery', color: 'bg-green-500' },
+            { label: 'Food', key: 'food', color: 'bg-orange-500' },
+            { label: 'Pharmacy', key: 'pharmacy', color: 'bg-purple-500' },
+            { label: 'Parcel', key: 'parcel', color: 'bg-blue-500' },
+          ].map((type) => {
+            const count = (data?.serviceTypeBreakdown as Record<string, number> | undefined)?.[type.key] ?? 0;
+            return (
+              <div key={type.key} className="flex items-center gap-3 rounded-lg border border-gray-100 p-3">
+                <div className={`h-3 w-3 rounded-full ${type.color}`} />
+                <div>
+                  <p className="text-xs text-gray-500">{type.label}</p>
+                  <p className="text-lg font-bold text-gray-900">{count}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Revenue Chart + Recent Orders */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <RevenueChart data={data?.revenueChart || []} />
+          <RevenueChart data={Array.isArray(data?.revenueChart) ? data.revenueChart : []} />
         </div>
         <div className="lg:col-span-1">
-          <RecentOrdersWidget orders={data?.recentOrders || []} />
+          <RecentOrdersWidget orders={Array.isArray(data?.recentOrders) ? data.recentOrders : []} />
         </div>
       </div>
     </div>

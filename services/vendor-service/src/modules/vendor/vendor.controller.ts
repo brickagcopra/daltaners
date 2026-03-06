@@ -57,6 +57,16 @@ export class VendorController {
     return this.vendorService.createStore(ownerId, dto);
   }
 
+  @Get('stores/me')
+  @Roles('vendor_owner', 'vendor_staff')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get the store associated with the current user' })
+  @ApiResponse({ status: 200, description: 'Store details for current vendor user' })
+  @ApiResponse({ status: 404, description: 'No store associated with this account' })
+  async getMyStore(@CurrentUser('id') userId: string) {
+    return this.vendorService.findMyStore(userId);
+  }
+
   @Get('stores')
   @Roles('vendor_owner')
   @ApiBearerAuth()
@@ -81,14 +91,18 @@ export class VendorController {
     );
   }
 
-  @Get('stores/:id')
+  @Get('stores/:idOrSlug')
   @Public()
-  @ApiOperation({ summary: 'Get store details by ID' })
-  @ApiParam({ name: 'id', type: String, description: 'Store UUID' })
+  @ApiOperation({ summary: 'Get store details by ID or slug' })
+  @ApiParam({ name: 'idOrSlug', type: String, description: 'Store UUID or slug' })
   @ApiResponse({ status: 200, description: 'Store details' })
   @ApiResponse({ status: 404, description: 'Store not found' })
-  async getStore(@Param('id', ParseUUIDPipe) id: string) {
-    return this.vendorService.findStoreById(id);
+  async getStore(@Param('idOrSlug') idOrSlug: string) {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (uuidRegex.test(idOrSlug)) {
+      return this.vendorService.findStoreById(idOrSlug);
+    }
+    return this.vendorService.findStoreBySlug(idOrSlug);
   }
 
   @Patch('stores/:id')

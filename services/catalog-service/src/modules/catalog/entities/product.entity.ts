@@ -9,6 +9,7 @@ import {
   UpdateDateColumn,
   Index,
 } from 'typeorm';
+import { BrandEntity } from './brand.entity';
 import { CategoryEntity } from './category.entity';
 import { ProductImageEntity } from './product-image.entity';
 import { ProductVariantEntity } from './product-variant.entity';
@@ -54,6 +55,10 @@ export class ProductEntity {
   @Column({ type: 'varchar', length: 255, nullable: true })
   @Index('idx_products_brand')
   brand: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  @Index('idx_products_brand_id')
+  brand_id: string | null;
 
   @Column({ type: 'varchar', length: 20, nullable: true })
   unit_type: string | null;
@@ -130,6 +135,10 @@ export class ProductEntity {
   @ManyToOne(() => CategoryEntity, { nullable: false })
   @JoinColumn({ name: 'category_id' })
   category: CategoryEntity;
+
+  @ManyToOne(() => BrandEntity, { nullable: true })
+  @JoinColumn({ name: 'brand_id' })
+  brand_entity: BrandEntity | null;
 
   @OneToMany(() => ProductImageEntity, (image) => image.product, { cascade: true })
   images: ProductImageEntity[];

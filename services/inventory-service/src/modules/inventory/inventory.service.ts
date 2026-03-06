@@ -15,6 +15,7 @@ import { AdjustStockDto } from './dto/adjust-stock.dto';
 import { ReserveStockDto } from './dto/reserve-stock.dto';
 import { ReleaseStockDto } from './dto/release-stock.dto';
 import { StockQueryDto } from './dto/stock-query.dto';
+import { AdminStockQueryDto, AdminMovementsQueryDto } from './dto/admin-stock-query.dto';
 
 @Injectable()
 export class InventoryService {
@@ -415,6 +416,44 @@ export class InventoryService {
 
     const { items, total } = await this.repository.findMovementsByStockId(stockId, page, limit);
     return { items, total, page, limit };
+  }
+
+  // ── Admin Methods ──────────────────────────────────────────────
+
+  async adminListStock(query: AdminStockQueryDto) {
+    const { items, total } = await this.repository.findAllStockAdmin(query);
+    return {
+      success: true,
+      data: items,
+      meta: {
+        page: query.page ?? 1,
+        limit: query.limit ?? 20,
+        total,
+        totalPages: Math.ceil(total / (query.limit ?? 20)),
+      },
+    };
+  }
+
+  async adminGetStats() {
+    const stats = await this.repository.getInventoryStats();
+    return {
+      success: true,
+      data: stats,
+    };
+  }
+
+  async adminListMovements(query: AdminMovementsQueryDto) {
+    const { items, total } = await this.repository.findMovementsAdmin(query);
+    return {
+      success: true,
+      data: items,
+      meta: {
+        page: query.page ?? 1,
+        limit: query.limit ?? 20,
+        total,
+        totalPages: Math.ceil(total / (query.limit ?? 20)),
+      },
+    };
   }
 
   private async publishOutOfStockEvent(stock: StockEntity): Promise<void> {

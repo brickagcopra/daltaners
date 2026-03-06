@@ -1,0 +1,138 @@
+name: Deploy to Kubernetes
+
+on:
+  workflow_run:
+    workflows: ["Build & Push Docker Images"]
+    types: [completed]
+    branches: [master, main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      service:
+        description: "Specific service to deploy (leave empty for all)"
+        required: false
+        type: string
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/daltaners
+
+jobs:
+  deploy:
+    name: Deploy to ${{ github.event.inputs.environment || 'staging' }}
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    environment:
+      name: ${{ github.event.inputs.environment || 'staging' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: "v1.29.0"
+
+      - name: Set kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBECONFIG }}" | base64 -d > $HOME/.kube/config
+
+      - name: Get image tag
+        id: tag
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+            echo "tag=$(echo ${{ github.event.workflow_run.head_sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
+          else
+            echo "tag=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Apply base resources
+        run: |
+          kubectl apply -f k8s/base/namespace.yaml
+          kubectl apply -f k8s/base/configmap.yaml
+          kubectl apply -f k8s/base/service-account.yaml
+
+      - name: Deploy infrastructure
+        run: |
+          kubectl apply -f k8s/infrastructure/
+
+      - name: Wait for infrastructure readiness
+        run: |
+          echo "Waiting for PostgreSQL..."
+          kubectl -n daltaners wait --for=condition=ready pod -l app=postgres --timeout=300s || true
+          echo "Waiting for Redis..."
+          kubectl -n daltaners wait --for=condition=ready pod -l app=redis --timeout=120s || true
+          echo "Waiting for Kafka..."
+          kubectl -n daltaners wait --for=condition=ready pod -l app=kafka --timeout=300s || true
+
+      - name: Deploy backend services
+        run: |
+          SERVICES="auth user vendor catalog inventory order delivery payment notification chat zone loyalty"
+          TAG="${{ steps.tag.outputs.tag }}"
+
+          if [ -n "${{ github.event.inputs.service }}" ]; then
+            SERVICES="${{ github.event.inputs.service }}"
+          fi
+
+          for svc in $SERVICES; do
+            SVC_NAME="${svc}-service"
+            MANIFEST="k8s/services/${SVC_NAME}.yaml"
+            if [ -f "$MANIFEST" ]; then
+              echo "Deploying ${SVC_NAME} with tag ${TAG}..."
+              kubectl apply -f "$MANIFEST"
+              kubectl -n daltaners set image deployment/${SVC_NAME} \
+                ${SVC_NAME}=${{ env.IMAGE_PREFIX }}/${SVC_NAME}:${TAG}
+            fi
+          done
+
+      - name: Deploy frontend apps
+        if: github.event.inputs.service == '' || contains(fromJson('["customer-web","admin-panel","vendor-dashboard"]'), github.event.inputs.service)
+        run: |
+          APPS="customer-web admin-panel vendor-dashboard"
+          TAG="${{ steps.tag.outputs.tag }}"
+
+          for app in $APPS; do
+            MANIFEST="k8s/apps/${app}.yaml"
+            if [ -f "$MANIFEST" ]; then
+              echo "Deploying ${app} with tag ${TAG}..."
+              kubectl apply -f "$MANIFEST"
+              kubectl -n daltaners set image deployment/${app} \
+                ${app}=${{ env.IMAGE_PREFIX }}/${app}:${TAG}
+            fi
+          done
+
+      - name: Apply Ingress
+        run: |
+          kubectl apply -f k8s/apps/ingress.yaml
+
+      - name: Apply autoscaling resources
+        run: |
+          kubectl apply -f k8s/autoscaling/
+
+      - name: Verify rollout
+        run: |
+          DEPLOYMENTS=$(kubectl -n daltaners get deployments -o jsonpath='{.items[*].metadata.name}')
+          for deploy in $DEPLOYMENTS; do
+            echo "Checking rollout status for ${deploy}..."
+            kubectl -n daltaners rollout status deployment/${deploy} --timeout=300s || echo "WARNING: ${deploy} rollout not complete"
+          done
+
+      - name: Post-deployment summary
+        run: |
+          echo "=== Deployment Summary ==="
+          kubectl -n daltaners get deployments
+          echo ""
+          echo "=== Pod Status ==="
+          kubectl -n daltaners get pods
+          echo ""
+          echo "=== Services ==="
+          kubectl -n daltaners get services

@@ -1,25 +1,26 @@
 import { useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import api from '@/lib/api';
-import { useAuthStore } from '@/stores/auth.store';
+import { useAuthStore, AdminUser } from '@/stores/auth.store';
 
 interface LoginPayload {
   email: string;
   password: string;
 }
 
-interface LoginResponse {
+interface BackendLoginResponse {
   success: boolean;
   data: {
     user: {
       id: string;
-      email: string;
-      name: string;
-      role: 'admin';
-      avatar?: string;
+      email: string | null;
+      phone: string | null;
+      role: string;
+      is_verified: boolean;
+      is_active: boolean;
     };
-    accessToken: string;
-    refreshToken: string;
+    access_token: string;
+    refresh_token: string;
   };
 }
 
@@ -29,15 +30,21 @@ export function useLogin() {
 
   return useMutation({
     mutationFn: async (payload: LoginPayload) => {
-      const response = await api.post<LoginResponse>('/auth/login', payload);
+      const response = await api.post<BackendLoginResponse>('/auth/login', payload);
       return response.data;
     },
     onSuccess: (data) => {
-      const { user, accessToken, refreshToken } = data.data;
+      const { user, access_token, refresh_token } = data.data;
       if (user.role !== 'admin') {
         throw new Error('Access denied. Admin role required.');
       }
-      setAuth(user, accessToken, refreshToken);
+      const adminUser: AdminUser = {
+        id: user.id,
+        email: user.email ?? '',
+        name: user.email?.split('@')[0] ?? 'Admin',
+        role: 'admin',
+      };
+      setAuth(adminUser, access_token, refresh_token);
       navigate('/');
     },
   });

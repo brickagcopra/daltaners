@@ -11,7 +11,7 @@ export class CassandraService implements OnModuleInit, OnModuleDestroy {
   constructor(private readonly configService: ConfigService) {
     this.client = new Client({
       contactPoints: [this.configService.get('CASSANDRA_HOST', 'localhost')],
-      localDataCenter: this.configService.get('CASSANDRA_DATACENTER', 'datacenter1'),
+      localDataCenter: this.configService.get('CASSANDRA_DATACENTER', 'dc1'),
       keyspace: this.configService.get('CASSANDRA_KEYSPACE', 'daltaners_tracking'),
     });
   }

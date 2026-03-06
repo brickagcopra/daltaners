@@ -233,4 +233,29 @@ export class ZoneRepository {
       [name, city, province, region, centerLng, centerLat, radiusKm * 1000, baseFee, perKmFee, radiusKm],
     );
   }
+
+  async findDistinctCities(): Promise<{ city: string; province: string; region: string }[]> {
+    const result = await this.repository.manager.query(
+      `SELECT DISTINCT city, province, region
+      FROM zones.delivery_zones
+      WHERE is_active = true
+      ORDER BY region, province, city`,
+    );
+    return result;
+  }
+
+  async findZonesByCity(city: string): Promise<DeliveryZoneEntity[]> {
+    const result = await this.repository.manager.query(
+      `SELECT id, name, city, province, region,
+        ST_AsGeoJSON(boundary)::jsonb AS boundary,
+        base_delivery_fee, per_km_fee, surge_multiplier,
+        is_active, max_delivery_radius_km, capacity_limit,
+        current_capacity, metadata, created_at
+      FROM zones.delivery_zones
+      WHERE is_active = true AND city = $1
+      ORDER BY name ASC`,
+      [city],
+    );
+    return result;
+  }
 }

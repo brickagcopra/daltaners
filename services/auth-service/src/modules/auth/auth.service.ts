@@ -14,6 +14,9 @@ import { AuthRepository } from './auth.repository';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { RequestPasswordResetDto, ResetPasswordDto, ChangePasswordDto } from './dto/password-reset.dto';
+import { AdminUserQueryDto } from './dto/admin-user-query.dto';
+import { AdminCreateUserDto } from './dto/admin-create-user.dto';
+import { AdminUpdateUserDto } from './dto/admin-update-user.dto';
 import { RedisService } from './redis.service';
 import { KafkaProducerService, KAFKA_TOPICS } from './kafka-producer.service';
 
@@ -109,6 +112,56 @@ export class AuthService {
     return {
       user: this.sanitizeUser(user),
       ...tokens,
+    };
+  }
+
+  async vendorLogin(dto: LoginDto) {
+    if (!dto.email && !dto.phone) {
+      throw new BadRequestException('Either email or phone is required');
+    }
+
+    const user = dto.email
+      ? await this.authRepo.findUserByEmail(dto.email)
+      : await this.authRepo.findUserByPhone(dto.phone!);
+
+    if (!user || !user.password_hash) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    if (!user.is_active) {
+      throw new UnauthorizedException('Account is deactivated');
+    }
+
+    if (!['vendor_owner', 'vendor_staff'].includes(user.role)) {
+      throw new UnauthorizedException('This login is for vendor accounts only');
+    }
+
+    const isPasswordValid = await bcrypt.compare(dto.password, user.password_hash);
+    if (!isPasswordValid) {
+      this.logger.warn(`Failed vendor login attempt for user: ${user.id}`);
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    await this.authRepo.updateUser(user.id, { last_login_at: new Date() });
+
+    const tokens = await this.generateTokens(user.id, user.role);
+
+    // Enrich with profile + vendor data
+    const profile = await this.authRepo.findVendorProfile(user.id);
+
+    return {
+      user: {
+        id: user.id,
+        email: user.email ?? '',
+        firstName: profile?.first_name ?? '',
+        lastName: profile?.last_name ?? '',
+        role: user.role as 'vendor_owner' | 'vendor_staff',
+        permissions: [],
+        vendorId: profile?.vendor_id ?? '',
+        avatarUrl: profile?.avatar_url ?? null,
+      },
+      accessToken: tokens.access_token,
+      refreshToken: tokens.refresh_token,
     };
   }
 
@@ -255,6 +308,142 @@ export class AuthService {
     this.logger.log(`Password changed for user: ${userId}`);
 
     return { message: 'Password changed successfully' };
+  }
+
+  // ── Admin methods ──────────────────────────────────────────────
+
+  async adminListUsers(query: AdminUserQueryDto) {
+    const { page = 1, limit = 20 } = query;
+    const { users, total } = await this.authRepo.findAllUsersAdmin(query);
+
+    return {
+      data: users.map((u) => this.sanitizeUser(u)),
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async adminGetUser(id: string) {
+    const user = await this.authRepo.findUserById(id);
+    if (!user) throw new BadRequestException('User not found');
+    return this.sanitizeUser(user);
+  }
+
+  async adminCreateUser(dto: AdminCreateUserDto) {
+    if (!dto.email && !dto.phone) {
+      throw new BadRequestException('Either email or phone is required');
+    }
+
+    if (dto.email) {
+      const existing = await this.authRepo.findUserByEmail(dto.email);
+      if (existing) throw new ConflictException('Email already registered');
+    }
+
+    if (dto.phone) {
+      const existing = await this.authRepo.findUserByPhone(dto.phone);
+      if (existing) throw new ConflictException('Phone already registered');
+    }
+
+    const passwordHash = await bcrypt.hash(dto.password, this.BCRYPT_ROUNDS);
+
+    const user = await this.authRepo.createUser({
+      email: dto.email || null,
+      phone: dto.phone || null,
+      password_hash: passwordHash,
+      role: dto.role,
+      is_verified: false,
+      is_active: true,
+    });
+
+    this.logger.log(`Admin created user: ${user.id} (${user.role})`);
+
+    try {
+      await this.kafkaProducer.publish(
+        KAFKA_TOPICS.USERS_EVENTS,
+        'registered',
+        {
+          user_id: user.id,
+          email: user.email,
+          phone: user.phone,
+          role: user.role,
+          first_name: dto.first_name,
+          last_name: dto.last_name,
+        },
+        user.id,
+      );
+    } catch {
+      this.logger.warn(`Failed to publish user.registered event for ${user.id}`);
+    }
+
+    return this.sanitizeUser(user);
+  }
+
+  async adminUpdateUser(id: string, dto: AdminUpdateUserDto) {
+    const user = await this.authRepo.findUserById(id);
+    if (!user) throw new BadRequestException('User not found');
+
+    const updateData: Record<string, unknown> = {};
+
+    if (dto.email !== undefined) {
+      if (dto.email !== user.email) {
+        const existing = await this.authRepo.findUserByEmail(dto.email);
+        if (existing && existing.id !== id) {
+          throw new ConflictException('Email already in use');
+        }
+      }
+      updateData.email = dto.email;
+    }
+
+    if (dto.phone !== undefined) {
+      if (dto.phone !== user.phone) {
+        const existing = await this.authRepo.findUserByPhone(dto.phone);
+        if (existing && existing.id !== id) {
+          throw new ConflictException('Phone already in use');
+        }
+      }
+      updateData.phone = dto.phone;
+    }
+
+    if (dto.role !== undefined) {
+      updateData.role = dto.role;
+    }
+
+    if (dto.is_active !== undefined) {
+      updateData.is_active = dto.is_active;
+    }
+
+    if (Object.keys(updateData).length > 0) {
+      await this.authRepo.updateUser(id, updateData);
+    }
+
+    this.logger.log(`Admin updated user: ${id}`);
+
+    const updated = await this.authRepo.findUserById(id);
+    return this.sanitizeUser(updated!);
+  }
+
+  async adminResetPassword(id: string) {
+    const user = await this.authRepo.findUserById(id);
+    if (!user) throw new BadRequestException('User not found');
+
+    const newPassword = randomBytes(12).toString('base64url');
+    const passwordHash = await bcrypt.hash(newPassword, this.BCRYPT_ROUNDS);
+
+    await this.authRepo.updateUser(id, {
+      password_hash: passwordHash,
+      password_reset_token: null,
+      password_reset_expires_at: null,
+    });
+
+    await this.authRepo.revokeAllUserRefreshTokens(id);
+
+    this.logger.log(`Admin reset password for user: ${id}`);
+
+    return { temporary_password: newPassword };
   }
 
   async isTokenBlacklisted(jti: string): Promise<boolean> {

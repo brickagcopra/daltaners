@@ -43,7 +43,7 @@ export const authHandlers = [
     return wrap({ user, ...tokens });
   }),
 
-  // POST /auth/vendor/login (vendor dashboard uses separate endpoint)
+  // POST /auth/vendor/login (vendor dashboard uses separate endpoint — returns camelCase)
   http.post(`${BASE}/auth/vendor/login`, async ({ request }) => {
     await delay(300);
     const body = (await request.json()) as { email?: string; password?: string };
@@ -62,7 +62,26 @@ export const authHandlers = [
     currentUserId = cred.userId;
     const tokens = makeTokens(cred.userId);
 
-    return wrap({ user, ...tokens });
+    // Vendor dashboard expects camelCase response
+    const vendorUser = {
+      id: user.id,
+      email: user.email,
+      firstName: user.first_name,
+      lastName: user.last_name,
+      displayName: user.display_name,
+      role: user.role,
+      permissions: ['product:manage', 'order:manage', 'inventory:manage', 'store:manage'],
+      vendorId: (user as Record<string, unknown>).vendor_id as string ?? '',
+      avatarUrl: user.avatar_url,
+    };
+
+    return wrap({
+      user: vendorUser,
+      accessToken: tokens.access_token,
+      refreshToken: tokens.refresh_token,
+      expiresIn: tokens.expires_in,
+      tokenType: tokens.token_type,
+    });
   }),
 
   // POST /auth/register

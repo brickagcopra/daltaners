@@ -4,3 +4,11 @@ export { UpdateDeliveryStatusDto, DeliveryStatus } from './update-delivery-statu
 export { NearbyRidersDto } from './nearby-riders.dto';
 export { CreateDeliveryDto } from './create-delivery.dto';
 export { ToggleOnlineDto } from './toggle-online.dto';
+export { CreateCarrierDto } from './create-carrier.dto';
+export { UpdateCarrierDto } from './update-carrier.dto';
+export { CarrierQueryDto } from './carrier-query.dto';
+export { CreateCarrierServiceDto, UpdateCarrierServiceDto } from './create-carrier-service.dto';
+export { CreateShipmentDto } from './create-shipment.dto';
+export { ShipmentQueryDto, AdminShipmentQueryDto } from './shipment-query.dto';
+export { UpdateShipmentStatusDto } from './update-shipment-status.dto';
+export { ShippingRateRequestDto } from './shipping-rate.dto';

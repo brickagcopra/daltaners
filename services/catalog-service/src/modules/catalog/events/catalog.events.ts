@@ -7,6 +7,18 @@ export const CATALOG_EVENTS = {
   CATEGORY_DELETED: 'daltaners.catalog.category-deleted',
 } as const;
 
+export const PRICING_EVENTS = {
+  RULE_CREATED: 'daltaners.catalog.pricing-rule-created',
+  RULE_UPDATED: 'daltaners.catalog.pricing-rule-updated',
+  RULE_ACTIVATED: 'daltaners.catalog.pricing-rule-activated',
+  RULE_PAUSED: 'daltaners.catalog.pricing-rule-paused',
+  RULE_EXPIRED: 'daltaners.catalog.pricing-rule-expired',
+  RULE_CANCELLED: 'daltaners.catalog.pricing-rule-cancelled',
+  RULE_DELETED: 'daltaners.catalog.pricing-rule-deleted',
+  PRICES_APPLIED: 'daltaners.catalog.prices-applied',
+  PRICES_REVERTED: 'daltaners.catalog.prices-reverted',
+} as const;
+
 export const KAFKA_TOPIC = 'daltaners.catalog.events';
 
 export interface DaltanersEvent<T> {

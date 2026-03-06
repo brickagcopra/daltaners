@@ -20,7 +20,7 @@ export function RevenueChart({ data }: RevenueChartProps) {
       month: 'short',
       day: 'numeric',
     }),
-    revenue: Number((item.revenue / 100).toFixed(2)),
+    revenue: Number(item.revenue.toFixed(2)),
   }));
 
   return (

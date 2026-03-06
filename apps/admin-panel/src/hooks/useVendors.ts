@@ -3,29 +3,39 @@ import api from '@/lib/api';
 
 export interface Vendor {
   id: string;
-  storeName: string;
-  ownerName: string;
-  ownerEmail: string;
-  phone: string;
+  owner_id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  logo_url: string | null;
+  banner_url: string | null;
   category: string;
-  status: 'pending' | 'active' | 'suspended' | 'rejected';
-  address: string;
-  city: string;
-  rating: number;
-  totalOrders: number;
-  totalRevenue: number;
-  commissionRate: number;
-  documents: VendorDocument[];
-  createdAt: string;
-  approvedAt: string | null;
+  status: 'pending' | 'active' | 'suspended' | 'closed';
+  commission_rate: number | null;
+  subscription_tier: string | null;
+  contact_phone: string | null;
+  contact_email: string | null;
+  business_permit_url: string | null;
+  dti_registration: string | null;
+  bir_tin: string | null;
+  rating_average: number;
+  rating_count: number;
+  total_orders: number;
+  is_featured: boolean;
+  created_at: string;
+  updated_at: string;
+  locations: VendorLocation[];
 }
 
-export interface VendorDocument {
+export interface VendorLocation {
   id: string;
-  type: 'business_permit' | 'dti_registration' | 'bir_certificate' | 'valid_id';
-  url: string;
-  status: 'pending' | 'verified' | 'rejected';
-  uploadedAt: string;
+  branch_name: string;
+  address_line1: string;
+  city: string;
+  province: string;
+  latitude: number;
+  longitude: number;
+  is_primary: boolean;
 }
 
 interface VendorsFilters {
@@ -52,6 +62,20 @@ interface VendorResponse {
   data: Vendor;
 }
 
+interface VendorStatsResponse {
+  success: boolean;
+  data: {
+    totalStores: number;
+    activeStores: number;
+    pendingStores: number;
+    suspendedStores: number;
+    storesByCategory: { category: string; count: number }[];
+    storesByTier: { tier: string; count: number }[];
+    averageRating: number;
+    totalOrders: number;
+  };
+}
+
 export function useVendors(filters: VendorsFilters = {}) {
   const { page = 1, limit = 20, search, status, category } = filters;
 
@@ -65,7 +89,7 @@ export function useVendors(filters: VendorsFilters = {}) {
       if (status) params.set('status', status);
       if (category) params.set('category', category);
 
-      const response = await api.get<VendorsResponse>(`/admin/vendors?${params.toString()}`);
+      const response = await api.get<VendorsResponse>(`/vendors/admin/stores?${params.toString()}`);
       return response.data;
     },
   });
@@ -75,10 +99,21 @@ export function useVendor(id: string) {
   return useQuery({
     queryKey: ['admin', 'vendors', id],
     queryFn: async () => {
-      const response = await api.get<VendorResponse>(`/admin/vendors/${id}`);
+      const response = await api.get<VendorResponse>(`/vendors/admin/stores/${id}`);
       return response.data;
     },
     enabled: !!id,
+  });
+}
+
+export function useVendorStats() {
+  return useQuery({
+    queryKey: ['admin', 'vendors', 'stats'],
+    queryFn: async () => {
+      const response = await api.get<VendorStatsResponse>('/vendors/admin/stats');
+      return response.data;
+    },
+    staleTime: 2 * 60 * 1000,
   });
 }
 
@@ -86,9 +121,9 @@ export function useApproveVendor() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, commissionRate }: { id: string; commissionRate: number }) => {
-      const response = await api.post<VendorResponse>(`/admin/vendors/${id}/approve`, {
-        commissionRate,
+    mutationFn: async ({ id, commission_rate }: { id: string; commission_rate?: number }) => {
+      const response = await api.post<VendorResponse>(`/vendors/admin/stores/${id}/approve`, {
+        commission_rate,
       });
       return response.data;
     },
@@ -103,9 +138,23 @@ export function useSuspendVendor() {
 
   return useMutation({
     mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
-      const response = await api.post<VendorResponse>(`/admin/vendors/${id}/suspend`, {
+      const response = await api.post<VendorResponse>(`/vendors/admin/stores/${id}/suspend`, {
         reason,
       });
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'vendors'] });
+    },
+  });
+}
+
+export function useReactivateVendor() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id }: { id: string }) => {
+      const response = await api.post<VendorResponse>(`/vendors/admin/stores/${id}/reactivate`);
       return response.data;
     },
     onSuccess: () => {

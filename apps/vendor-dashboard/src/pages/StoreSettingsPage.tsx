@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Button } from '@/components/ui/Button';
+import { ImageUploadField } from '@/components/ui/ImageUploadField';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -27,10 +28,14 @@ export function StoreSettingsPage() {
   const [deliveryRadius, setDeliveryRadius] = useState('');
   const [minimumOrder, setMinimumOrder] = useState('');
   const [operatingHours, setOperatingHours] = useState<OperatingHours[]>(defaultHours);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [bannerUrl, setBannerUrl] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
     if (store) {
+      // Mock data uses snake_case; cast to access raw fields
+      const raw = store as unknown as Record<string, unknown>;
       setName(store.name);
       setDescription(store.description || '');
       setPhone(store.phone || '');
@@ -41,6 +46,8 @@ export function StoreSettingsPage() {
       if (store.operatingHours?.length) {
         setOperatingHours(store.operatingHours);
       }
+      setLogoUrl((raw.logo_url as string) || store.logoUrl || null);
+      setBannerUrl((raw.banner_url as string) || store.coverImageUrl || null);
     }
   }, [store]);
 
@@ -70,6 +77,8 @@ export function StoreSettingsPage() {
           deliveryRadius: parseFloat(deliveryRadius) || 0,
           minimumOrder: parseFloat(minimumOrder) || 0,
           operatingHours,
+          logo_url: logoUrl,
+          banner_url: bannerUrl,
         },
       },
       {
@@ -107,6 +116,25 @@ export function StoreSettingsPage() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Store Images */}
+        <Card>
+          <h3 className="mb-4 text-lg font-semibold text-gray-900">Store Images</h3>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            <ImageUploadField
+              label="Store Logo"
+              value={logoUrl}
+              onChange={setLogoUrl}
+              aspectHint="Recommended: 200x200px"
+            />
+            <ImageUploadField
+              label="Banner Image"
+              value={bannerUrl}
+              onChange={setBannerUrl}
+              aspectHint="Recommended: 1200x400px"
+            />
+          </div>
+        </Card>
+
         {/* Basic Info */}
         <Card>
           <h3 className="mb-4 text-lg font-semibold text-gray-900">Basic Information</h3>

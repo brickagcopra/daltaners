@@ -1,12 +1,24 @@
 import { http, delay, HttpResponse } from 'msw';
 import { wrap, paginatedWrap, errorResponse, getSearchParams } from '../helpers';
-import { stores, orders, products, productsByStore, vendorDashboard, users } from '../data';
+import { stores, orders, products, productsByStore, vendorDashboard, vendorAnalyticsMock, vendorFinancials, users, settlementItems } from '../data';
 import { getCurrentUser } from './auth.handlers';
 
 const BASE = '/api/v1';
 
-function getVendorStore() {
-  const user = getCurrentUser();
+// Extract user ID from mock token: "mock-access-{userId}-{timestamp}"
+function getUserFromToken(request: Request) {
+  const auth = request.headers.get('authorization') ?? '';
+  const match = auth.match(/^Bearer mock-access-(u-[a-z]+-\d+)-/);
+  if (match) {
+    const user = users.find((u) => u.id === match[1]);
+    if (user) return user;
+  }
+  // Fallback to in-memory current user
+  return getCurrentUser();
+}
+
+function getVendorStore(request?: Request) {
+  const user = request ? getUserFromToken(request) : getCurrentUser();
   if (!user) return null;
   const vendorId = (user as Record<string, unknown>).vendor_id as string | undefined;
   if (!vendorId) return null;
@@ -15,10 +27,18 @@ function getVendorStore() {
 
 export const vendorHandlers = [
   // ===== STORE =====
-  // GET /vendor/store
-  http.get(`${BASE}/vendor/store`, async () => {
+  // GET /stores/me — vendor dashboard fetches current vendor's store
+  http.get(`${BASE}/stores/me`, async ({ request }) => {
     await delay(200);
-    const store = getVendorStore();
+    const store = getVendorStore(request);
+    if (!store) return errorResponse(403, 'FORBIDDEN', 'No store associated with this account');
+    return wrap(store);
+  }),
+
+  // GET /vendor/store (legacy alias)
+  http.get(`${BASE}/vendor/store`, async ({ request }) => {
+    await delay(200);
+    const store = getVendorStore(request);
     if (!store) return errorResponse(403, 'FORBIDDEN', 'No store associated with this account');
     return wrap(store);
   }),
@@ -33,7 +53,7 @@ export const vendorHandlers = [
   }),
 
   // ===== STAFF =====
-  // GET /stores/:storeId/staff
+  // GET /stores/:storeId/staff — returns camelCase for vendor dashboard
   http.get(`${BASE}/stores/:storeId/staff`, async ({ params }) => {
     await delay(200);
     const storeId = params.storeId as string;
@@ -44,14 +64,16 @@ export const vendorHandlers = [
     );
     const staff = staffUsers.map((u) => ({
       id: `staff-${u.id}`,
-      store_id: storeId,
-      user_id: u.id,
-      user: { id: u.id, first_name: u.first_name, last_name: u.last_name, email: u.email, avatar_url: u.avatar_url },
-      role: u.role === 'vendor_owner' ? 'manager' : 'staff',
+      email: u.email,
+      firstName: u.first_name,
+      lastName: u.last_name,
+      role: u.role,
       permissions: u.role === 'vendor_owner'
-        ? { manage_products: true, manage_orders: true, manage_staff: true, manage_settings: true }
-        : { manage_products: true, manage_orders: true, manage_staff: false, manage_settings: false },
-      is_active: true,
+        ? ['product:manage', 'order:manage', 'staff:manage', 'store:manage']
+        : ['product:manage', 'order:manage'],
+      isActive: true,
+      createdAt: u.created_at,
+      lastLoginAt: u.last_login_at,
     }));
     return wrap(staff);
   }),
@@ -192,6 +214,40 @@ export const vendorHandlers = [
     return new HttpResponse(null, { status: 204 });
   }),
 
+  // ===== CSV IMPORT =====
+  // POST /catalog/products/import
+  http.post(`${BASE}/catalog/products/import`, async () => {
+    await delay(800);
+    return wrap({
+      total_rows: 10,
+      successful: 8,
+      failed: 2,
+      errors: [
+        { row: 4, field: 'category_id', message: 'Category ID must be a valid UUID' },
+        { row: 7, field: 'base_price', message: 'Base price must be a non-negative number' },
+      ],
+    });
+  }),
+
+  // GET /catalog/products/import/template
+  http.get(`${BASE}/catalog/products/import/template`, async () => {
+    await delay(100);
+    const csv = 'name,description,category_id,base_price,sale_price,sku,barcode,brand,unit_type,unit_value,cost_price,weight_grams,is_perishable,shelf_life_days,dietary_tags,allergens\nPancit Canton Original,Instant noodle stir-fry,<category-uuid>,12.50,,SKU-001,4800000000001,Lucky Me,pack,1,8.00,65,false,,noodles;instant,wheat;egg\n';
+    return new HttpResponse(csv, {
+      headers: {
+        'Content-Type': 'text/csv',
+        'Content-Disposition': 'attachment; filename="product-import-template.csv"',
+      },
+    });
+  }),
+
+  // ===== VENDOR ANALYTICS =====
+  // GET /orders/vendor/:storeId/analytics
+  http.get(`${BASE}/orders/vendor/:storeId/analytics`, async () => {
+    await delay(300);
+    return wrap(vendorAnalyticsMock);
+  }),
+
   // ===== INVENTORY =====
   // GET /stores/:storeId/inventory
   http.get(`${BASE}/stores/:storeId/inventory`, async ({ params, request }) => {
@@ -248,5 +304,127 @@ export const vendorHandlers = [
   http.get(`${BASE}/stores/:storeId/dashboard`, async () => {
     await delay(200);
     return wrap(vendorDashboard);
+  }),
+
+  // ===== FINANCIALS =====
+  // GET /payments/settlements/summary
+  http.get(`${BASE}/payments/settlements/summary`, async () => {
+    await delay(200);
+    return wrap(vendorFinancials.summary);
+  }),
+
+  // GET /payments/settlements
+  http.get(`${BASE}/payments/settlements`, async ({ request }) => {
+    await delay(300);
+    const sp = getSearchParams(request);
+    const page = parseInt(sp.get('page') ?? '1', 10);
+    const limit = parseInt(sp.get('limit') ?? '10', 10);
+    const status = sp.get('status');
+
+    let settlements = [...vendorFinancials.settlements];
+    if (status && status !== 'all') {
+      settlements = settlements.filter((s) => s.status === status);
+    }
+
+    return paginatedWrap(settlements, page, limit);
+  }),
+
+  // GET /payments/settlements/:id — Vendor settlement detail with order breakdown
+  http.get(`${BASE}/payments/settlements/:id`, async ({ params }) => {
+    await delay(300);
+    const settlement = vendorFinancials.settlements.find((s) => s.id === params.id);
+    if (!settlement) return errorResponse(404, 'SETTLEMENT_NOT_FOUND', 'Settlement not found');
+    // Look up items from shared mock data; generate fallback items for vendor settlements
+    const items = settlementItems[settlement.id] ?? [
+      { id: `si-v-${settlement.id}-1`, settlement_id: settlement.id, order_id: 'ord-v-01', order_number: 'DAL-2026-V00101', subtotal: settlement.gross_amount * 0.4, commission_rate: 10, commission_amount: settlement.gross_amount * 0.04, net_amount: settlement.gross_amount * 0.36, delivered_at: settlement.period_start },
+      { id: `si-v-${settlement.id}-2`, settlement_id: settlement.id, order_id: 'ord-v-02', order_number: 'DAL-2026-V00202', subtotal: settlement.gross_amount * 0.35, commission_rate: 10, commission_amount: settlement.gross_amount * 0.035, net_amount: settlement.gross_amount * 0.315, delivered_at: settlement.period_start },
+      { id: `si-v-${settlement.id}-3`, settlement_id: settlement.id, order_id: 'ord-v-03', order_number: 'DAL-2026-V00303', subtotal: settlement.gross_amount * 0.25, commission_rate: 10, commission_amount: settlement.gross_amount * 0.025, net_amount: settlement.gross_amount * 0.225, delivered_at: settlement.period_end },
+    ];
+    return wrap({ ...settlement, items });
+  }),
+
+  // ===== VENDOR COUPONS =====
+  // GET /orders/vendor/coupons
+  http.get(`${BASE}/orders/vendor/coupons`, async ({ request }) => {
+    await delay(250);
+    const sp = getSearchParams(request);
+    const page = parseInt(sp.get('page') ?? '1', 10);
+    const limit = parseInt(sp.get('limit') ?? '10', 10);
+    const search = sp.get('search')?.toLowerCase();
+    const discountType = sp.get('discount_type');
+    const isActive = sp.get('is_active');
+
+    let coupons = [...vendorFinancials.vendorCoupons];
+
+    if (search) {
+      coupons = coupons.filter(
+        (c) => c.code.toLowerCase().includes(search) || c.name.toLowerCase().includes(search),
+      );
+    }
+    if (discountType) {
+      coupons = coupons.filter((c) => c.discount_type === discountType);
+    }
+    if (isActive === 'true') {
+      coupons = coupons.filter((c) => c.is_active);
+    } else if (isActive === 'false') {
+      coupons = coupons.filter((c) => !c.is_active);
+    }
+
+    return paginatedWrap(coupons, page, limit);
+  }),
+
+  // GET /orders/vendor/coupons/:id
+  http.get(`${BASE}/orders/vendor/coupons/:id`, async ({ params }) => {
+    await delay(200);
+    const coupon = vendorFinancials.vendorCoupons.find((c) => c.id === params.id);
+    if (!coupon) return errorResponse(404, 'NOT_FOUND', 'Coupon not found');
+    return wrap(coupon);
+  }),
+
+  // POST /orders/vendor/coupons
+  http.post(`${BASE}/orders/vendor/coupons`, async ({ request }) => {
+    await delay(400);
+    const body = (await request.json()) as Record<string, unknown>;
+    const newCoupon = {
+      id: `vc-${Date.now()}`,
+      code: ((body.code as string) ?? 'NEW').toUpperCase(),
+      name: body.name ?? 'New Coupon',
+      description: body.description ?? null,
+      discount_type: body.discount_type ?? 'percentage',
+      discount_value: body.discount_value ?? 0,
+      minimum_order_value: body.minimum_order_value ?? 0,
+      maximum_discount: body.maximum_discount ?? null,
+      applicable_categories: body.applicable_categories ?? null,
+      applicable_stores: ['vendor-001'],
+      usage_limit: body.usage_limit ?? null,
+      usage_count: 0,
+      per_user_limit: body.per_user_limit ?? 1,
+      is_first_order_only: body.is_first_order_only ?? false,
+      valid_from: body.valid_from ?? new Date().toISOString(),
+      valid_until: body.valid_until ?? new Date(Date.now() + 30 * 86400000).toISOString(),
+      is_active: true,
+      created_by: 'vendor-user-001',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    return HttpResponse.json(
+      { success: true, data: newCoupon, timestamp: new Date().toISOString() },
+      { status: 201 },
+    );
+  }),
+
+  // PATCH /orders/vendor/coupons/:id
+  http.patch(`${BASE}/orders/vendor/coupons/:id`, async ({ params, request }) => {
+    await delay(300);
+    const coupon = vendorFinancials.vendorCoupons.find((c) => c.id === params.id);
+    if (!coupon) return errorResponse(404, 'NOT_FOUND', 'Coupon not found');
+    const body = (await request.json()) as Record<string, unknown>;
+    return wrap({ ...coupon, ...body, updated_at: new Date().toISOString() });
+  }),
+
+  // DELETE /orders/vendor/coupons/:id
+  http.delete(`${BASE}/orders/vendor/coupons/:id`, async () => {
+    await delay(200);
+    return new HttpResponse(null, { status: 204 });
   }),
 ];

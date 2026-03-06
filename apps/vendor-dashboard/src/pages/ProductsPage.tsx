@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/auth.store';
 import { useStoreProducts, useDeleteProduct } from '@/hooks/useProducts';
 import { ProductTable } from '@/components/products/ProductTable';
+import { CsvImportModal } from '@/components/products/CsvImportModal';
 import { SearchInput } from '@/components/common/SearchInput';
 import { Pagination } from '@/components/common/Pagination';
 import { Button } from '@/components/ui/Button';
@@ -39,6 +41,8 @@ export function ProductsPage() {
   const [category, setCategory] = useState('');
   const [isActiveFilter, setIsActiveFilter] = useState('');
   const [deleteProductId, setDeleteProductId] = useState<string | null>(null);
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const queryClient = useQueryClient();
 
   const { data, isLoading } = useStoreProducts(storeId, {
     page,
@@ -73,14 +77,22 @@ export function ProductsPage() {
           <h1 className="text-2xl font-bold text-gray-900">Products</h1>
           <p className="mt-1 text-sm text-gray-500">Manage your store's product catalog</p>
         </div>
-        <Link to="/products/new">
-          <Button>
+        <div className="flex items-center gap-3">
+          <Button variant="outline" onClick={() => setImportModalOpen(true)}>
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
             </svg>
-            Add Product
+            Import CSV
           </Button>
-        </Link>
+          <Link to="/products/new">
+            <Button>
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Add Product
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Filters */}
@@ -116,7 +128,7 @@ export function ProductsPage() {
       ) : (
         <>
           <ProductTable
-            products={data?.data || []}
+            products={Array.isArray(data?.data) ? data.data : []}
             onDelete={handleDelete}
             isDeleting={deleteMutation.isPending}
           />
@@ -129,6 +141,15 @@ export function ProductsPage() {
           )}
         </>
       )}
+
+      {/* CSV Import Modal */}
+      <CsvImportModal
+        isOpen={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['store-products'] });
+        }}
+      />
 
       {/* Delete Confirmation */}
       <Modal

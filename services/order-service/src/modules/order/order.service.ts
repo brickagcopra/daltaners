@@ -6,12 +6,22 @@ import {
   Logger,
 } from '@nestjs/common';
 import { OrderRepository, PaginatedResult, CursorPaginatedResult } from './order.repository';
+import { CouponService } from './coupon.service';
 import { RedisService } from './redis.service';
 import { KafkaProducerService } from './kafka-producer.service';
 import { OrderEntity } from './entities/order.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { OrderQueryDto } from './dto/order-query.dto';
+import { AdminOrderQueryDto, AdminOrderStatsQueryDto } from './dto/admin-order-query.dto';
+import {
+  getServiceTypeRules,
+  validateMinimumOrder,
+  validateDeliveryType,
+  validatePrescription,
+  calculateEstimatedDelivery,
+} from './service-type-rules';
+import { ZoneClientService } from './zone-client.service';
 
 const ORDER_CACHE_TTL = 300; // 5 minutes
 
@@ -46,11 +56,17 @@ export class OrderService {
 
   constructor(
     private readonly orderRepository: OrderRepository,
+    private readonly couponService: CouponService,
     private readonly redisService: RedisService,
     private readonly kafkaProducer: KafkaProducerService,
+    private readonly zoneClient: ZoneClientService,
   ) {}
 
   async createOrder(customerId: string, dto: CreateOrderDto): Promise<OrderEntity> {
+    // ── Service-type validation ──
+    const rules = getServiceTypeRules(dto.service_type);
+    validateDeliveryType(rules, dto.delivery_type);
+
     const orderNumber = await this.generateUniqueOrderNumber();
 
     // Calculate item totals using placeholder unit price
@@ -71,14 +87,64 @@ export class OrderService {
 
     // Calculate fee breakdown
     const subtotal = itemsData.reduce((sum, item) => sum + Number(item.total_price), 0);
-    const deliveryFee = dto.order_type === 'pickup' ? 0 : (DELIVERY_FEE_MAP[dto.delivery_type] || 49.0);
+
+    // Validate minimum order amount per service type
+    validateMinimumOrder(rules, subtotal);
+
+    // Validate prescription for pharmacy orders with Rx items
+    validatePrescription(rules, !!dto.has_rx_items, dto.prescription_upload_id);
+
+    // Zone-based delivery fee with fallback to static map
+    let deliveryFee = 0;
+    if (dto.order_type !== 'pickup') {
+      const originLat = (dto.delivery_address as any)?.lat || 0;
+      const originLng = (dto.delivery_address as any)?.lng || 0;
+      deliveryFee = await this.zoneClient.calculateDeliveryFee(
+        originLat,
+        originLng,
+        dto.destination_lat || 0,
+        dto.destination_lng || 0,
+        dto.delivery_type,
+      );
+    }
     const serviceFee = parseFloat((subtotal * SERVICE_FEE_RATE).toFixed(2));
     const taxAmount = parseFloat((subtotal * TAX_RATE).toFixed(2));
-    const discountAmount = 0;
     const tipAmount = dto.tip_amount || 0;
+
+    // Validate and apply coupon if provided
+    let discountAmount = 0;
+    let couponId: string | null = null;
+    let couponValidation: { coupon_id: string; discount_type: string; discount_amount: number } | null = null;
+
+    if (dto.coupon_code) {
+      const validationResult = await this.couponService.validateCoupon(
+        {
+          code: dto.coupon_code,
+          subtotal,
+          store_id: dto.store_id,
+          category_ids: dto.category_ids,
+        },
+        customerId,
+      );
+
+      couponId = validationResult.coupon_id;
+      discountAmount = validationResult.discount_amount;
+      couponValidation = validationResult;
+
+      // For free_delivery coupons, zero out delivery fee
+      if (validationResult.discount_type === 'free_delivery') {
+        deliveryFee = 0;
+      }
+    }
+
     const totalAmount = parseFloat(
       (subtotal + deliveryFee + serviceFee + taxAmount - discountAmount + tipAmount).toFixed(2),
     );
+
+    // Calculate estimated delivery time based on service type prep time
+    const estimatedDeliveryAt = dto.order_type === 'pickup'
+      ? null
+      : calculateEstimatedDelivery(rules);
 
     const orderData: Partial<OrderEntity> = {
       order_number: orderNumber,
@@ -102,10 +168,11 @@ export class OrderService {
       delivery_address: dto.delivery_address,
       delivery_instructions: dto.delivery_instructions || null,
       substitution_policy: dto.substitution_policy || 'refund_only',
-      coupon_code: dto.coupon_code || null,
+      coupon_id: couponId,
+      coupon_code: dto.coupon_code ? dto.coupon_code.toUpperCase() : null,
       customer_notes: dto.customer_notes || null,
       cancellation_reason: null,
-      estimated_delivery_at: null,
+      estimated_delivery_at: estimatedDeliveryAt,
       actual_delivery_at: null,
       prepared_at: null,
       picked_up_at: null,
@@ -113,6 +180,11 @@ export class OrderService {
     };
 
     const order = await this.orderRepository.createOrder(orderData, itemsData);
+
+    // Redeem coupon after order is saved
+    if (couponValidation && couponId) {
+      await this.couponService.redeemCoupon(couponId, customerId, order.id, discountAmount);
+    }
 
     // Cache the new order
     await this.cacheOrder(order);
@@ -212,6 +284,9 @@ export class OrderService {
       throw new NotFoundException(`Order with id ${orderId} not found after update`);
     }
 
+    // Release coupon if one was applied
+    await this.couponService.releaseCoupon(orderId);
+
     // Invalidate cache
     await this.invalidateOrderCache(orderId);
 
@@ -297,6 +372,11 @@ export class OrderService {
       throw new NotFoundException(`Order with id ${orderId} not found after update`);
     }
 
+    // Release coupon if order is cancelled via status update
+    if (dto.status === 'cancelled') {
+      await this.couponService.releaseCoupon(orderId);
+    }
+
     // Invalidate cache
     await this.invalidateOrderCache(orderId);
 
@@ -309,6 +389,7 @@ export class OrderService {
         order_number: updatedOrder.order_number,
         customer_id: updatedOrder.customer_id,
         store_id: updatedOrder.store_id,
+        total_amount: Number(updatedOrder.total_amount),
         previous_status: order.status,
         new_status: dto.status,
         updated_by: userId,
@@ -349,6 +430,7 @@ export class OrderService {
         order_number: order.order_number,
         customer_id: order.customer_id,
         store_id: order.store_id,
+        total_amount: Number(order.total_amount),
         previous_status: order.status,
         new_status: 'confirmed',
         updated_by: 'system',
@@ -376,6 +458,9 @@ export class OrderService {
       payment_status: 'failed',
       cancellation_reason: 'Payment failed',
     } as Partial<OrderEntity>);
+
+    // Release coupon if one was applied
+    await this.couponService.releaseCoupon(orderId);
 
     await this.invalidateOrderCache(orderId);
 
@@ -447,6 +532,7 @@ export class OrderService {
         order_number: order.order_number,
         customer_id: order.customer_id,
         store_id: order.store_id,
+        total_amount: Number(order.total_amount),
         previous_status: order.status,
         new_status: mappedStatus,
         updated_by: 'delivery-service',
@@ -458,6 +544,47 @@ export class OrderService {
     this.logger.log(
       `Order delivery status updated: ${order.order_number} to '${mappedStatus}' from delivery tracking`,
     );
+  }
+
+  // ── Vendor Analytics ──
+
+  async getVendorAnalytics(
+    storeId: string,
+    dateFrom?: string,
+    dateTo?: string,
+  ) {
+    const analytics = await this.orderRepository.getVendorAnalytics(storeId, dateFrom, dateTo);
+    return {
+      success: true,
+      data: analytics,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  // ── Admin Methods ──
+
+  async adminListOrders(query: AdminOrderQueryDto) {
+    const result = await this.orderRepository.findAllOrdersAdmin(query);
+    return {
+      success: true,
+      data: result.items,
+      meta: {
+        page: result.page,
+        limit: result.limit,
+        total: result.total,
+        totalPages: result.totalPages,
+      },
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  async adminGetStats(query?: AdminOrderStatsQueryDto) {
+    const stats = await this.orderRepository.getOrderStats(query?.date_from, query?.date_to);
+    return {
+      success: true,
+      data: stats,
+      timestamp: new Date().toISOString(),
+    };
   }
 
   private async generateUniqueOrderNumber(): Promise<string> {
@@ -481,7 +608,7 @@ export class OrderService {
   private generateOrderNumber(): string {
     const year = new Date().getFullYear();
     const random = Math.floor(100000 + Math.random() * 900000);
-    return `BIR-${year}-${random}`;
+    return `DLT-${year}-${random}`;
   }
 
   private enforceOrderAccess(

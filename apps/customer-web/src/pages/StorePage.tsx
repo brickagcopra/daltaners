@@ -6,6 +6,7 @@ import { StoreHeader } from '@/components/store/StoreHeader';
 import { CategoryPills } from '@/components/common/CategoryPills';
 import { ProductGrid } from '@/components/product/ProductGrid';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { ReviewSection } from '@/components/review/ReviewSection';
 
 export function StorePage() {
   const { slug } = useParams<{ slug: string }>();
@@ -54,7 +55,7 @@ export function StorePage() {
 
         {/* Product Grid */}
         <ProductGrid
-          products={productsData?.data || []}
+          products={Array.isArray(productsData?.data) ? productsData.data : []}
           isLoading={productsLoading}
           emptyTitle="No products available"
           emptyDescription={
@@ -63,6 +64,9 @@ export function StorePage() {
               : 'This store has no products listed yet.'
           }
         />
+
+        {/* Store Reviews */}
+        <ReviewSection reviewableType="store" reviewableId={store.id} />
       </div>
     </div>
   );

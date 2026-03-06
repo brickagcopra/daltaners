@@ -19,6 +19,13 @@ const statusTabs = [
   { label: 'Cancelled', value: 'cancelled' },
 ];
 
+const serviceTypeTabs = [
+  { label: 'All Types', value: 'all' },
+  { label: 'Grocery', value: 'grocery' },
+  { label: 'Food', value: 'food' },
+  { label: 'Pharmacy', value: 'pharmacy' },
+];
+
 export function OrdersPage() {
   const user = useAuthStore((s) => s.user);
   const storeId = user?.vendorId || null;
@@ -26,6 +33,7 @@ export function OrdersPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all');
+  const [serviceTypeFilter, setServiceTypeFilter] = useState('all');
 
   const [rejectOrderId, setRejectOrderId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
@@ -35,6 +43,7 @@ export function OrdersPage() {
     limit: 20,
     search,
     status: statusFilter,
+    service_type: serviceTypeFilter !== 'all' ? serviceTypeFilter : undefined,
   });
 
   const updateStatusMutation = useUpdateOrderStatus();
@@ -73,6 +82,23 @@ export function OrdersPage() {
         <p className="mt-1 text-sm text-gray-500">Manage incoming orders and track fulfillment</p>
       </div>
 
+      {/* Service Type Filter */}
+      <div className="flex gap-1 rounded-lg bg-gray-100 p-1 w-fit">
+        {serviceTypeTabs.map((tab) => (
+          <button
+            key={tab.value}
+            onClick={() => { setServiceTypeFilter(tab.value); setPage(1); }}
+            className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+              serviceTypeFilter === tab.value
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-900'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       {/* Status Tabs */}
       <Tabs tabs={statusTabs} activeTab={statusFilter} onChange={handleStatusChange} />
 
@@ -93,7 +119,7 @@ export function OrdersPage() {
       ) : (
         <>
           <OrderTable
-            orders={data?.data || []}
+            orders={Array.isArray(data?.data) ? data.data : []}
             onAccept={handleAccept}
             onReject={handleReject}
             isUpdating={updateStatusMutation.isPending}

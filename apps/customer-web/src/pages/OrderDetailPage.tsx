@@ -1,7 +1,13 @@
 import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useOrder, useCancelOrder } from '@/hooks/useOrders';
+import { useOrderTracking } from '@/hooks/useOrderTracking';
+import { useSocketStore } from '@/stores/socket.store';
+import { useCartStore } from '@/stores/cart.store';
 import { OrderStatusTimeline } from '@/components/order/OrderStatusTimeline';
+import { DeliveryMap } from '@/components/order/DeliveryMap';
+import { RiderInfoCard } from '@/components/order/RiderInfoCard';
+import { LiveTrackingBanner } from '@/components/order/LiveTrackingBanner';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -16,6 +22,11 @@ export function OrderDetailPage() {
   const navigate = useNavigate();
   const { data: order, isLoading, isError } = useOrder(id || '');
   const cancelOrder = useCancelOrder();
+
+  const addItemWithQuantity = useCartStore((state) => state.addItemWithQuantity);
+
+  const { riderLocation, isTrackingActive } = useOrderTracking(id, order?.status);
+  const isSocketConnected = useSocketStore((state) => state.isConnected);
 
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
@@ -69,11 +80,27 @@ export function OrderDetailPage() {
         >
           {order.status.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
         </Badge>
+        {order.order_type === 'pickup' && (
+          <Badge variant="secondary">In-Store Pickup</Badge>
+        )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Left Column */}
         <div className="lg:col-span-2 space-y-6">
+          {/* Live Tracking (delivery only) */}
+          {order.order_type !== 'pickup' && isTrackingActive && riderLocation && (
+            <>
+              <LiveTrackingBanner isConnected={isSocketConnected} />
+              <DeliveryMap
+                riderLocation={riderLocation}
+                destinationLat={order.delivery_lat ?? 14.5995}
+                destinationLng={order.delivery_lng ?? 120.9842}
+                destinationLabel={order.delivery_address}
+              />
+            </>
+          )}
+
           {/* Order Status Timeline */}
           <Card>
             <CardHeader>
@@ -185,10 +212,22 @@ export function OrderDetailPage() {
         {/* Right Column - Summary */}
         <div className="lg:col-span-1">
           <div className="sticky top-24 space-y-4">
-            {/* Delivery Info */}
+            {/* Rider Info (delivery only) */}
+            {order.order_type !== 'pickup' && isTrackingActive && order.delivery_person && (
+              <RiderInfoCard
+                riderName={order.delivery_person.name}
+                vehicleType={order.delivery_person.vehicle_type}
+                etaMinutes={riderLocation?.eta_minutes}
+                riderPhone={order.delivery_person.phone}
+              />
+            )}
+
+            {/* Order Info */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Delivery Details</CardTitle>
+                <CardTitle className="text-base">
+                  {order.order_type === 'pickup' ? 'Pickup Details' : 'Delivery Details'}
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3 text-sm">
@@ -196,14 +235,51 @@ export function OrderDetailPage() {
                     <p className="text-xs font-medium uppercase text-muted-foreground tracking-wider">Store</p>
                     <p className="mt-0.5 text-foreground">{order.store_name}</p>
                   </div>
-                  <div>
-                    <p className="text-xs font-medium uppercase text-muted-foreground tracking-wider">Delivery Address</p>
-                    <p className="mt-0.5 text-foreground">{order.delivery_address}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium uppercase text-muted-foreground tracking-wider">Delivery Type</p>
-                    <p className="mt-0.5 text-foreground capitalize">{order.delivery_type}</p>
-                  </div>
+                  {order.order_type === 'pickup' ? (
+                    <>
+                      {order.scheduled_at && (
+                        <div>
+                          <p className="text-xs font-medium uppercase text-muted-foreground tracking-wider">Scheduled Pickup</p>
+                          <p className="mt-0.5 text-foreground">
+                            {new Date(order.scheduled_at).toLocaleString('en-PH', {
+                              weekday: 'short',
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                              hour: 'numeric',
+                              minute: '2-digit',
+                            })}
+                          </p>
+                        </div>
+                      )}
+                      {order.picked_up_at && (
+                        <div>
+                          <p className="text-xs font-medium uppercase text-muted-foreground tracking-wider">Picked Up At</p>
+                          <p className="mt-0.5 text-foreground">
+                            {new Date(order.picked_up_at).toLocaleString('en-PH', {
+                              weekday: 'short',
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                              hour: 'numeric',
+                              minute: '2-digit',
+                            })}
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <div>
+                        <p className="text-xs font-medium uppercase text-muted-foreground tracking-wider">Delivery Address</p>
+                        <p className="mt-0.5 text-foreground">{order.delivery_address}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium uppercase text-muted-foreground tracking-wider">Delivery Type</p>
+                        <p className="mt-0.5 text-foreground capitalize">{order.delivery_type}</p>
+                      </div>
+                    </>
+                  )}
                   <div>
                     <p className="text-xs font-medium uppercase text-muted-foreground tracking-wider">Payment Method</p>
                     <p className="mt-0.5 text-foreground capitalize">
@@ -276,11 +352,24 @@ export function OrderDetailPage() {
             </Card>
 
             {/* Reorder */}
-            {order.status === 'delivered' && (
+            {(order.status === 'delivered' || order.status === 'cancelled') && (
               <Button
                 variant="outline"
                 className="w-full"
-                onClick={() => navigate('/search')}
+                onClick={() => {
+                  for (const item of order.items) {
+                    addItemWithQuantity({
+                      product_id: item.product_id,
+                      variant_id: item.variant_id,
+                      store_id: order.store_id,
+                      name: item.name,
+                      image_url: item.image_url,
+                      price: item.price,
+                      quantity: item.quantity,
+                    });
+                  }
+                  navigate('/cart');
+                }}
               >
                 Order Again
               </Button>

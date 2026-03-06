@@ -7,6 +7,17 @@ export const VENDOR_EVENTS = {
   STAFF_REMOVED: 'daltaners.vendors.staff-removed',
 } as const;
 
+export const POLICY_EVENTS = {
+  VIOLATION_CREATED: 'com.daltaners.policy.violation_created',
+  PENALTY_APPLIED: 'com.daltaners.policy.penalty_applied',
+  VIOLATION_RESOLVED: 'com.daltaners.policy.violation_resolved',
+  VIOLATION_DISMISSED: 'com.daltaners.policy.violation_dismissed',
+  APPEAL_CREATED: 'com.daltaners.policy.appeal_created',
+  APPEAL_APPROVED: 'com.daltaners.policy.appeal_approved',
+  APPEAL_DENIED: 'com.daltaners.policy.appeal_denied',
+  APPEAL_ESCALATED: 'com.daltaners.policy.appeal_escalated',
+} as const;
+
 export interface StoreCreatedEvent {
   specversion: '1.0';
   id: string;

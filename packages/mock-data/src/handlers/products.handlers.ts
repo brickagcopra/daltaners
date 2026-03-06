@@ -29,7 +29,8 @@ export const productsHandlers = [
       );
     }
     if (categoryId) {
-      filtered = filtered.filter((p) => p.category_id === categoryId);
+      // Match exact ID or child categories (e.g. 'cat-001' matches 'cat-001-a', 'cat-001-b')
+      filtered = filtered.filter((p) => p.category_id === categoryId || p.category_id.startsWith(categoryId + '-'));
     }
     if (storeId) {
       filtered = filtered.filter((p) => p.store_id === storeId);
@@ -41,23 +42,27 @@ export const productsHandlers = [
       filtered = filtered.filter((p) => p.base_price <= maxPrice);
     }
 
-    if (sortBy === 'price_asc') {
+    const sortOrder = params.get('sort_order')?.toUpperCase();
+    if (sortBy === 'price_asc' || (sortBy === 'base_price' && sortOrder === 'ASC')) {
       filtered.sort((a, b) => a.base_price - b.base_price);
-    } else if (sortBy === 'price_desc') {
+    } else if (sortBy === 'price_desc' || (sortBy === 'base_price' && sortOrder === 'DESC')) {
       filtered.sort((a, b) => b.base_price - a.base_price);
     } else if (sortBy === 'rating') {
       filtered.sort((a, b) => b.rating_average - a.rating_average);
-    } else if (sortBy === 'popular') {
+    } else if (sortBy === 'popular' || sortBy === 'total_sold') {
       filtered.sort((a, b) => b.total_sold - a.total_sold);
+    } else if (sortBy === 'created_at') {
+      filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     }
 
     return cursorWrap(filtered, cursor, limit);
   }),
 
-  // GET /products/:id
+  // GET /products/:id — match by id or slug
   http.get(`${BASE}/products/:id`, async ({ params }) => {
     await delay(200);
-    const product = products.find((p) => p.id === params.id);
+    const idOrSlug = params.id as string;
+    const product = products.find((p) => p.id === idOrSlug || p.slug === idOrSlug);
     if (!product) {
       return errorResponse(404, 'NOT_FOUND', 'Product not found');
     }

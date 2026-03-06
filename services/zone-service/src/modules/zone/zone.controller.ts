@@ -54,6 +54,33 @@ export class ZoneController {
     return this.zoneService.findAllZones();
   }
 
+  @Get('cities')
+  @Public()
+  @ApiOperation({ summary: 'Get distinct cities with active delivery zones' })
+  @ApiResponse({ status: 200, description: 'List of available cities' })
+  async getAvailableCities() {
+    const cities = await this.zoneService.getAvailableCities();
+    return {
+      success: true,
+      data: cities,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Get('by-city/:city')
+  @Public()
+  @ApiOperation({ summary: 'Get all zones for a specific city' })
+  @ApiParam({ name: 'city', type: 'string' })
+  @ApiResponse({ status: 200, description: 'Zones for the given city' })
+  async findZonesByCity(@Param('city') city: string) {
+    const zones = await this.zoneService.findZonesByCity(city);
+    return {
+      success: true,
+      data: zones,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   @Get('lookup')
   @Public()
   @ApiOperation({ summary: 'Look up which zone a coordinate falls in' })

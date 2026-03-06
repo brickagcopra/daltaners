@@ -83,6 +83,15 @@ export class Store {
   @Column({ type: 'varchar', length: 50, nullable: true, name: 'bir_tin' })
   bir_tin: string | null;
 
+  @Column({ type: 'varchar', length: 100, nullable: true, name: 'fda_license_number' })
+  fda_license_number: string | null;
+
+  @Column({ type: 'date', nullable: true, name: 'fda_license_expiry' })
+  fda_license_expiry: Date | null;
+
+  @Column({ type: 'varchar', length: 500, nullable: true, name: 'pharmacy_license_url' })
+  pharmacy_license_url: string | null;
+
   @Column({ type: 'integer', default: 30, name: 'preparation_time_minutes' })
   preparation_time_minutes: number;
 

@@ -7,11 +7,16 @@ import { Badge } from '@/components/ui/Badge';
 import { PriceDisplay } from '@/components/product/PriceDisplay';
 import { QuantitySelector } from '@/components/product/QuantitySelector';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { ReviewSection } from '@/components/review/ReviewSection';
+import { RecommendationCarousel } from '@/components/product/RecommendationCarousel';
+import { useFrequentlyBoughtTogether, useSimilarProducts } from '@/hooks/useRecommendations';
 
 export function ProductPage() {
   const { id } = useParams<{ id: string }>();
   const { data: product, isLoading } = useProduct(id || '');
   const addItem = useCartStore((state) => state.addItem);
+  const { data: togetherProducts, isLoading: togetherLoading } = useFrequentlyBoughtTogether(id || '');
+  const { data: similarProducts, isLoading: similarLoading } = useSimilarProducts(id || '');
 
   const [selectedVariant, setSelectedVariant] = useState<string | undefined>();
   const [quantity, setQuantity] = useState(1);
@@ -227,6 +232,28 @@ export function ProductPage() {
           )}
         </div>
       </div>
+
+      {/* Frequently Bought Together */}
+      <div className="mt-8">
+        <RecommendationCarousel
+          title="Frequently Bought Together"
+          products={togetherProducts ?? []}
+          isLoading={togetherLoading}
+        />
+      </div>
+
+      {/* Similar Products */}
+      <div className="mt-4">
+        <RecommendationCarousel
+          title="Similar Products"
+          subtitle="You might also like"
+          products={similarProducts ?? []}
+          isLoading={similarLoading}
+        />
+      </div>
+
+      {/* Reviews Section */}
+      <ReviewSection reviewableType="product" reviewableId={product.id} />
     </div>
   );
 }

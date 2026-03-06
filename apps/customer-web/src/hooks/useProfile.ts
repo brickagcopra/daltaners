@@ -54,7 +54,7 @@ export function useProfile() {
   return useQuery({
     queryKey: ['profile'],
     queryFn: async () => {
-      const { data } = await api.get<{ success: boolean; data: Profile }>('/users/me');
+      const { data } = await api.get<{ success: boolean; data: Profile }>('/users/profile');
       return data.data;
     },
   });
@@ -65,7 +65,7 @@ export function useUpdateProfile() {
 
   return useMutation({
     mutationFn: async (payload: UpdateProfilePayload) => {
-      const { data } = await api.patch<{ success: boolean; data: Profile }>('/users/me', payload);
+      const { data } = await api.patch<{ success: boolean; data: Profile }>('/users/profile', payload);
       return data.data;
     },
     onSuccess: () => {
@@ -79,7 +79,7 @@ export function useAddresses() {
   return useQuery({
     queryKey: ['addresses'],
     queryFn: async () => {
-      const { data } = await api.get<{ success: boolean; data: Address[] }>('/users/me/addresses');
+      const { data } = await api.get<{ success: boolean; data: Address[] }>('/users/addresses');
       return data.data;
     },
   });
@@ -91,7 +91,7 @@ export function useCreateAddress() {
   return useMutation({
     mutationFn: async (payload: CreateAddressPayload) => {
       const { data } = await api.post<{ success: boolean; data: Address }>(
-        '/users/me/addresses',
+        '/users/addresses',
         payload,
       );
       return data.data;
@@ -107,7 +107,7 @@ export function useDeleteAddress() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      await api.delete(`/users/me/addresses/${id}`);
+      await api.delete(`/users/addresses/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['addresses'] });

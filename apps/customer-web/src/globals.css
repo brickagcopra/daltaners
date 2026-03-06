@@ -15,17 +15,21 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    background-color: #FAFAFA;
+    color: #1A1A2E;
     font-feature-settings: 'rlig' 1, 'calt' 1;
     min-height: 100vh;
   }
 
   :focus-visible {
-    @apply outline-2 outline-offset-2 outline-ring;
+    outline-width: 2px;
+    outline-offset: 2px;
+    outline-color: #FF6B35;
   }
 
   ::selection {
-    @apply bg-primary/20 text-foreground;
+    background-color: rgb(255 107 53 / 0.2);
+    color: #1A1A2E;
   }
 
   input[type='number']::-webkit-inner-spin-button,

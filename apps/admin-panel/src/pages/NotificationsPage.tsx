@@ -139,7 +139,7 @@ export function NotificationsPage() {
             </div>
             <DataTable
               columns={columns}
-              data={data?.data || []}
+              data={Array.isArray(data?.data) ? data.data : []}
               isLoading={isLoading}
               keyExtractor={(n) => n.id}
               emptyTitle="No notifications sent"

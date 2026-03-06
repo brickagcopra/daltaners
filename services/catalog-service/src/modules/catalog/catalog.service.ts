@@ -22,6 +22,7 @@ import { CreateProductVariantDto } from './dto/create-product-variant.dto';
 import { UpdateProductVariantDto } from './dto/update-product-variant.dto';
 import { ProductQueryDto } from './dto/product-query.dto';
 import { CATALOG_EVENTS, KAFKA_TOPIC, ProductEventData } from './events/catalog.events';
+import { ElasticsearchService } from './elasticsearch.service';
 
 const CATEGORY_TREE_CACHE_KEY = 'catalog:categories:tree';
 const CATEGORY_TREE_TTL = 3600; // 1 hour in seconds
@@ -34,6 +35,7 @@ export class CatalogService {
     private readonly catalogRepository: CatalogRepository,
     private readonly redisService: RedisService,
     private readonly kafkaProducer: KafkaProducerService,
+    private readonly elasticsearchService: ElasticsearchService,
   ) {}
 
   // ─── Category Operations ──────────────────────────────────────────────
@@ -118,9 +120,15 @@ export class CatalogService {
 
     const product = await this.catalogRepository.createProduct(dto, uniqueSlug);
 
+    // Fetch full product with relations for ES indexing
+    const fullProduct = await this.catalogRepository.findProductById(product.id);
+    if (fullProduct) {
+      this.indexProductAsync(fullProduct);
+    }
+
     await this.publishProductEvent(CATALOG_EVENTS.PRODUCT_CREATED, product);
     this.logger.log(`Product created: ${product.id} (${product.name}) by user ${userId}`);
-    return product;
+    return fullProduct ?? product;
   }
 
   async getProductById(id: string): Promise<ProductEntity> {
@@ -188,6 +196,9 @@ export class CatalogService {
     this.logger.log(`Product updated: ${id} by user ${userId}`);
 
     const fullProduct = await this.catalogRepository.findProductById(id);
+    if (fullProduct) {
+      this.indexProductAsync(fullProduct);
+    }
     return fullProduct!;
   }
 
@@ -197,6 +208,11 @@ export class CatalogService {
     userRole: string,
     userVendorId: string | null,
   ): Promise<void> {
+    const product = await this.catalogRepository.findProductById(id);
+    if (!product) {
+      throw new NotFoundException(`Product with ID ${id} not found`);
+    }
+
     if (userRole !== 'admin') {
       await this.validateVendorOwnership(id, userVendorId);
     }
@@ -206,6 +222,11 @@ export class CatalogService {
       throw new NotFoundException(`Product with ID ${id} not found`);
     }
 
+    // Remove from Elasticsearch
+    this.removeProductFromIndexAsync(id);
+
+    // Publish delete event
+    await this.publishProductEvent(CATALOG_EVENTS.PRODUCT_DELETED, product);
     this.logger.log(`Product deleted: ${id} by user ${userId}`);
   }
 
@@ -413,6 +434,18 @@ export class CatalogService {
     this.logger.debug(
       `Vendor ownership check: vendor=${userVendorId}, store=${storeId}, product=${productId}`,
     );
+  }
+
+  private indexProductAsync(product: ProductEntity): void {
+    this.elasticsearchService.indexProduct(product).catch((err: Error) => {
+      this.logger.error(`Async ES index failed for product ${product.id}: ${err.message}`);
+    });
+  }
+
+  private removeProductFromIndexAsync(productId: string): void {
+    this.elasticsearchService.removeProduct(productId).catch((err: Error) => {
+      this.logger.error(`Async ES remove failed for product ${productId}: ${err.message}`);
+    });
   }
 
   private async invalidateCategoryTreeCache(): Promise<void> {

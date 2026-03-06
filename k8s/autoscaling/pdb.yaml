@@ -1,0 +1,172 @@
+# PodDisruptionBudgets — ensure minimum availability during voluntary disruptions
+# (rolling updates, node drains, cluster maintenance)
+
+---
+# Critical path services: order, delivery, payment — minimum 2 pods always available
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: order-service-pdb
+  namespace: daltaners
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: order-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: delivery-service-pdb
+  namespace: daltaners
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: delivery-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: payment-service-pdb
+  namespace: daltaners
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: payment-service
+---
+# High-traffic services: auth, catalog — minimum 2 pods
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: auth-service-pdb
+  namespace: daltaners
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: auth-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: catalog-service-pdb
+  namespace: daltaners
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: catalog-service
+---
+# Other backend services: at least 1 pod
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: user-service-pdb
+  namespace: daltaners
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: user-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: vendor-service-pdb
+  namespace: daltaners
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: vendor-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: inventory-service-pdb
+  namespace: daltaners
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: inventory-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: notification-service-pdb
+  namespace: daltaners
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: notification-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: chat-service-pdb
+  namespace: daltaners
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: chat-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: zone-service-pdb
+  namespace: daltaners
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: zone-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: loyalty-service-pdb
+  namespace: daltaners
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: loyalty-service
+---
+# Frontend: customer-web must stay up
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: customer-web-pdb
+  namespace: daltaners
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: customer-web
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: admin-panel-pdb
+  namespace: daltaners
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: admin-panel
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: vendor-dashboard-pdb
+  namespace: daltaners
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: vendor-dashboard

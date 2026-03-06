@@ -13,6 +13,11 @@ import { ConfirmPaymentDto } from './dto/confirm-payment.dto';
 import { RefundDto } from './dto/refund.dto';
 import { SettlementQueryDto } from './dto/settlement-query.dto';
 import { WalletTopupDto } from './dto/wallet-topup.dto';
+import {
+  AdminTransactionQueryDto,
+  AdminSettlementQueryDto,
+  AdminWalletQueryDto,
+} from './dto/admin-transaction-query.dto';
 import { TransactionEntity } from './entities/transaction.entity';
 
 const KAFKA_TOPIC_PAYMENTS = 'daltaners.payments.events';
@@ -483,6 +488,17 @@ export class PaymentService {
     };
   }
 
+  // ── Vendor Settlement Summary ──────────────────────────────────────
+
+  async getVendorSettlementSummary(vendorId: string) {
+    const summary = await this.paymentRepo.getVendorSettlementSummary(vendorId);
+    return {
+      success: true,
+      data: summary,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   // ── Wallet Methods ──────────────────────────────────────────────────
 
   async getWalletBalance(userId: string) {
@@ -721,6 +737,118 @@ export class PaymentService {
         (error as Error).stack,
       );
     }
+  }
+
+  // ── Admin Methods ──────────────────────────────────────────────────
+
+  async adminListTransactions(query: AdminTransactionQueryDto) {
+    const { items, total } = await this.paymentRepo.findAllTransactionsAdmin({
+      search: query.search,
+      status: query.status,
+      method: query.method,
+      type: query.type,
+      dateFrom: query.date_from,
+      dateTo: query.date_to,
+      page: query.page,
+      limit: query.limit,
+    });
+
+    const page = query.page || 1;
+    const limit = query.limit || 20;
+
+    return {
+      success: true,
+      data: items,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  async adminGetTransactionStats() {
+    const stats = await this.paymentRepo.getTransactionStats();
+    return {
+      success: true,
+      data: stats,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  async adminListSettlements(query: AdminSettlementQueryDto) {
+    const { items, total } = await this.paymentRepo.findAllSettlementsAdmin({
+      vendorId: query.vendor_id,
+      status: query.status,
+      dateFrom: query.date_from,
+      dateTo: query.date_to,
+      page: query.page,
+      limit: query.limit,
+    });
+
+    const page = query.page || 1;
+    const limit = query.limit || 20;
+
+    return {
+      success: true,
+      data: items,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  async adminGetSettlementStats() {
+    const stats = await this.paymentRepo.getSettlementStats();
+    return {
+      success: true,
+      data: stats,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  async adminListWallets(query: AdminWalletQueryDto) {
+    const { items, total } = await this.paymentRepo.findAllWalletsAdmin({
+      search: query.search,
+      status: query.status,
+      page: query.page,
+      limit: query.limit,
+    });
+
+    const page = query.page || 1;
+    const limit = query.limit || 20;
+
+    return {
+      success: true,
+      data: items.map((w) => ({
+        ...w,
+        balance: Number(w.balance),
+        daily_limit: Number(w.daily_limit),
+        monthly_limit: Number(w.monthly_limit),
+      })),
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  async adminGetWalletStats() {
+    const stats = await this.paymentRepo.getWalletStats();
+    return {
+      success: true,
+      data: stats,
+      timestamp: new Date().toISOString(),
+    };
   }
 
   // ── Private Helpers ──────────────────────────────────────────────────

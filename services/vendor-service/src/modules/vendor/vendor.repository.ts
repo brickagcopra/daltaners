@@ -12,6 +12,7 @@ import { UpdateStoreLocationDto } from './dto/update-store-location.dto';
 import { OperatingHourEntryDto } from './dto/set-operating-hours.dto';
 import { CreateStoreStaffDto } from './dto/create-store-staff.dto';
 import { UpdateStoreStaffDto } from './dto/update-store-staff.dto';
+import { AdminVendorQueryDto } from './dto/admin-vendor-query.dto';
 
 @Injectable()
 export class VendorRepository {
@@ -57,6 +58,28 @@ export class VendorRepository {
       where: { slug },
       relations: ['locations'],
     });
+  }
+
+  async findStoreForUser(userId: string): Promise<Store | null> {
+    // First check if user is an owner
+    const ownedStore = await this.storeRepo.findOne({
+      where: { owner_id: userId },
+      relations: ['locations'],
+    });
+    if (ownedStore) return ownedStore;
+
+    // Then check if user is staff
+    const staffRecord = await this.staffRepo.findOne({
+      where: { user_id: userId, is_active: true },
+    });
+    if (staffRecord) {
+      return this.storeRepo.findOne({
+        where: { id: staffRecord.store_id },
+        relations: ['locations'],
+      });
+    }
+
+    return null;
   }
 
   async findStoresByOwner(ownerId: string): Promise<Store[]> {
@@ -334,5 +357,169 @@ export class VendorRepository {
       where: { store_id: storeId, user_id: userId },
     });
     return count > 0;
+  }
+
+  // ─── Admin Methods ──────────────────────────────────────────────────────────
+
+  async findAllStoresAdmin(query: AdminVendorQueryDto): Promise<{
+    items: Store[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    const { page = 1, limit = 20, search, status, category, subscription_tier } = query;
+
+    const qb = this.storeRepo
+      .createQueryBuilder('store')
+      .leftJoinAndSelect('store.locations', 'locations')
+      .select([
+        'store.id',
+        'store.owner_id',
+        'store.name',
+        'store.slug',
+        'store.description',
+        'store.logo_url',
+        'store.banner_url',
+        'store.category',
+        'store.status',
+        'store.commission_rate',
+        'store.subscription_tier',
+        'store.contact_phone',
+        'store.contact_email',
+        'store.business_permit_url',
+        'store.dti_registration',
+        'store.bir_tin',
+        'store.rating_average',
+        'store.rating_count',
+        'store.total_orders',
+        'store.is_featured',
+        'store.created_at',
+        'store.updated_at',
+        'locations.id',
+        'locations.branch_name',
+        'locations.address_line1',
+        'locations.city',
+        'locations.province',
+        'locations.latitude',
+        'locations.longitude',
+        'locations.is_primary',
+      ]);
+
+    if (search) {
+      qb.andWhere(
+        '(store.name ILIKE :search OR store.slug ILIKE :search OR store.contact_email ILIKE :search)',
+        { search: `%${search}%` },
+      );
+    }
+    if (status) {
+      qb.andWhere('store.status = :status', { status });
+    }
+    if (category) {
+      qb.andWhere('store.category = :category', { category });
+    }
+    if (subscription_tier) {
+      qb.andWhere('store.subscription_tier = :subscription_tier', { subscription_tier });
+    }
+
+    qb.orderBy('store.created_at', 'DESC');
+
+    const offset = (page - 1) * limit;
+    qb.skip(offset).take(limit);
+
+    const [items, total] = await qb.getManyAndCount();
+
+    return {
+      items,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  async getVendorStats(): Promise<{
+    totalStores: number;
+    activeStores: number;
+    pendingStores: number;
+    suspendedStores: number;
+    storesByCategory: { category: string; count: number }[];
+    storesByTier: { tier: string; count: number }[];
+    averageRating: number;
+    totalOrders: number;
+  }> {
+    // Total counts by status
+    const statusCounts = await this.storeRepo
+      .createQueryBuilder('store')
+      .select('store.status', 'status')
+      .addSelect('COUNT(*)', 'count')
+      .groupBy('store.status')
+      .getRawMany();
+
+    const statusMap: Record<string, number> = {};
+    for (const row of statusCounts) {
+      statusMap[row.status] = parseInt(row.count, 10);
+    }
+
+    // Category breakdown
+    const categoryCounts = await this.storeRepo
+      .createQueryBuilder('store')
+      .select('store.category', 'category')
+      .addSelect('COUNT(*)', 'count')
+      .groupBy('store.category')
+      .getRawMany();
+
+    // Tier breakdown
+    const tierCounts = await this.storeRepo
+      .createQueryBuilder('store')
+      .select('store.subscription_tier', 'tier')
+      .addSelect('COUNT(*)', 'count')
+      .where('store.subscription_tier IS NOT NULL')
+      .groupBy('store.subscription_tier')
+      .getRawMany();
+
+    // Aggregate stats
+    const aggResult = await this.storeRepo
+      .createQueryBuilder('store')
+      .select('COALESCE(AVG(store.rating_average), 0)', 'avg_rating')
+      .addSelect('COALESCE(SUM(store.total_orders), 0)', 'total_orders')
+      .getRawOne();
+
+    const totalStores = Object.values(statusMap).reduce((sum, c) => sum + c, 0);
+
+    return {
+      totalStores,
+      activeStores: statusMap['active'] || 0,
+      pendingStores: statusMap['pending'] || 0,
+      suspendedStores: statusMap['suspended'] || 0,
+      storesByCategory: categoryCounts.map((row) => ({
+        category: row.category,
+        count: parseInt(row.count, 10),
+      })),
+      storesByTier: tierCounts.map((row) => ({
+        tier: row.tier || 'none',
+        count: parseInt(row.count, 10),
+      })),
+      averageRating: parseFloat(parseFloat(aggResult?.avg_rating || '0').toFixed(2)),
+      totalOrders: parseInt(aggResult?.total_orders || '0', 10),
+    };
+  }
+
+  async updateStoreStatus(id: string, status: string, metadata?: Record<string, unknown>): Promise<Store | null> {
+    const updateData: Record<string, unknown> = { status };
+    if (metadata) {
+      // Merge metadata into existing
+      const existing = await this.storeRepo.findOne({ where: { id } });
+      if (existing) {
+        updateData.metadata = { ...existing.metadata, ...metadata };
+      }
+    }
+    await this.storeRepo.update(id, updateData as any);
+    return this.findStoreById(id);
+  }
+
+  async adminUpdateStore(id: string, data: Partial<Store>): Promise<Store | null> {
+    await this.storeRepo.update(id, data as any);
+    return this.findStoreById(id);
   }
 }

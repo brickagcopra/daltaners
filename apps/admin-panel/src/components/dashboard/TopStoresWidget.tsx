@@ -1,9 +1,9 @@
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 
 interface TopStore {
-  storeId: string;
-  storeName: string;
-  orderCount: number;
+  store_id: string;
+  store_name: string;
+  order_count: number;
   revenue: number;
 }
 
@@ -25,17 +25,17 @@ export function TopStoresWidget({ stores }: TopStoresWidgetProps) {
         ) : (
           <div className="space-y-4">
             {stores.map((store, index) => (
-              <div key={store.storeId} className="flex items-center gap-4">
+              <div key={store.store_id} className="flex items-center gap-4">
                 <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
                   {index + 1}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <p className="truncate text-sm font-medium text-foreground">
-                      {store.storeName}
+                      {store.store_name}
                     </p>
                     <p className="ml-2 flex-shrink-0 text-sm font-semibold text-foreground">
-                      P{(store.revenue / 100).toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                      P{store.revenue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
                     </p>
                   </div>
                   <div className="mt-1.5 flex items-center gap-2">
@@ -46,7 +46,7 @@ export function TopStoresWidget({ stores }: TopStoresWidgetProps) {
                       />
                     </div>
                     <span className="flex-shrink-0 text-xs text-muted-foreground">
-                      {store.orderCount} orders
+                      {store.order_count} orders
                     </span>
                   </div>
                 </div>

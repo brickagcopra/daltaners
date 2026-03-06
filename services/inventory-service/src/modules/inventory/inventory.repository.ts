@@ -4,6 +4,7 @@ import { Repository, DataSource } from 'typeorm';
 import { StockEntity } from './entities/stock.entity';
 import { StockMovementEntity, MovementType } from './entities/stock-movement.entity';
 import { StockQueryDto } from './dto/stock-query.dto';
+import { AdminStockQueryDto, AdminMovementsQueryDto } from './dto/admin-stock-query.dto';
 
 export interface CreateStockParams {
   productId: string;
@@ -358,5 +359,163 @@ export class InventoryRepository {
     } finally {
       await queryRunner.release();
     }
+  }
+
+  // ── Admin Methods ──────────────────────────────────────────────
+
+  async findAllStockAdmin(
+    query: AdminStockQueryDto,
+  ): Promise<{ items: Record<string, unknown>[]; total: number }> {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+    const offset = (page - 1) * limit;
+
+    const params: unknown[] = [];
+    const conditions: string[] = [];
+    let paramIdx = 1;
+
+    if (query.search) {
+      conditions.push(`p.name ILIKE $${paramIdx}`);
+      params.push(`%${query.search}%`);
+      paramIdx++;
+    }
+
+    if (query.store_location_id) {
+      conditions.push(`s.store_location_id = $${paramIdx}`);
+      params.push(query.store_location_id);
+      paramIdx++;
+    }
+
+    if (query.status === 'low') {
+      conditions.push('(s.quantity - s.reserved_quantity) <= s.reorder_point AND (s.quantity - s.reserved_quantity) > 0');
+    } else if (query.status === 'out_of_stock') {
+      conditions.push('(s.quantity - s.reserved_quantity) <= 0');
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const countSql = `
+      SELECT COUNT(*) as total
+      FROM inventory.stock s
+      LEFT JOIN catalog.products p ON s.product_id = p.id
+      ${whereClause}
+    `;
+    const countResult = await this.dataSource.query(countSql, params);
+    const total = parseInt(countResult[0]?.total || '0', 10);
+
+    const dataSql = `
+      SELECT
+        s.id,
+        s.product_id,
+        s.variant_id,
+        s.store_location_id,
+        s.quantity,
+        s.reserved_quantity,
+        s.reorder_point,
+        s.reorder_quantity,
+        s.batch_number,
+        s.expiry_date,
+        s.last_restocked_at,
+        s.updated_at,
+        (s.quantity - s.reserved_quantity) as available_quantity,
+        p.name as product_name,
+        p.sku as product_sku,
+        p.base_price as product_price,
+        sl.branch_name as location_name,
+        sl.city as location_city,
+        vs.name as store_name
+      FROM inventory.stock s
+      LEFT JOIN catalog.products p ON s.product_id = p.id
+      LEFT JOIN vendors.store_locations sl ON s.store_location_id = sl.id
+      LEFT JOIN vendors.stores vs ON sl.store_id = vs.id
+      ${whereClause}
+      ORDER BY s.updated_at DESC
+      LIMIT $${paramIdx} OFFSET $${paramIdx + 1}
+    `;
+    params.push(limit, offset);
+
+    const items = await this.dataSource.query(dataSql, params);
+    return { items, total };
+  }
+
+  async getInventoryStats(): Promise<Record<string, number>> {
+    const sql = `
+      SELECT
+        COUNT(*) as total_entries,
+        COALESCE(SUM(s.quantity), 0) as total_quantity,
+        COALESCE(SUM(s.reserved_quantity), 0) as total_reserved,
+        COUNT(*) FILTER (WHERE (s.quantity - s.reserved_quantity) <= s.reorder_point AND (s.quantity - s.reserved_quantity) > 0) as low_stock_count,
+        COUNT(*) FILTER (WHERE (s.quantity - s.reserved_quantity) <= 0) as out_of_stock_count
+      FROM inventory.stock s
+    `;
+    const result = await this.dataSource.query(sql);
+    const row = result[0] || {};
+    return {
+      total_entries: parseInt(row.total_entries || '0', 10),
+      total_quantity: parseInt(row.total_quantity || '0', 10),
+      total_reserved: parseInt(row.total_reserved || '0', 10),
+      low_stock_count: parseInt(row.low_stock_count || '0', 10),
+      out_of_stock_count: parseInt(row.out_of_stock_count || '0', 10),
+    };
+  }
+
+  async findMovementsAdmin(
+    query: AdminMovementsQueryDto,
+  ): Promise<{ items: Record<string, unknown>[]; total: number }> {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+    const offset = (page - 1) * limit;
+
+    const params: unknown[] = [];
+    const conditions: string[] = [];
+    let paramIdx = 1;
+
+    if (query.stock_id) {
+      conditions.push(`m.stock_id = $${paramIdx}`);
+      params.push(query.stock_id);
+      paramIdx++;
+    }
+
+    if (query.movement_type) {
+      conditions.push(`m.movement_type = $${paramIdx}`);
+      params.push(query.movement_type);
+      paramIdx++;
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const countSql = `
+      SELECT COUNT(*) as total
+      FROM inventory.stock_movements m
+      ${whereClause}
+    `;
+    const countResult = await this.dataSource.query(countSql, params);
+    const total = parseInt(countResult[0]?.total || '0', 10);
+
+    const dataSql = `
+      SELECT
+        m.id,
+        m.stock_id,
+        m.movement_type,
+        m.quantity,
+        m.reference_type,
+        m.reference_id,
+        m.notes,
+        m.performed_by,
+        m.created_at,
+        p.name as product_name,
+        sl.branch_name as location_name
+      FROM inventory.stock_movements m
+      LEFT JOIN inventory.stock s ON m.stock_id = s.id
+      LEFT JOIN catalog.products p ON s.product_id = p.id
+      LEFT JOIN vendors.store_locations sl ON s.store_location_id = sl.id
+      ${whereClause}
+      ORDER BY m.created_at DESC
+      LIMIT $${paramIdx} OFFSET $${paramIdx + 1}
+    `;
+    params.push(limit, offset);
+
+    const items = await this.dataSource.query(dataSql, params);
+    return { items, total };
   }
 }

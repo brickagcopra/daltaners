@@ -1,0 +1,127 @@
+# NetworkPolicies — restrict traffic between services to only what's needed
+
+---
+# Default deny all ingress in namespace
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: daltaners
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+
+---
+# Allow ingress from NGINX Ingress controller to frontend apps
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-to-frontends
+  namespace: daltaners
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app.kubernetes.io/component
+        operator: In
+        values: ["frontend"]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - port: 80
+          protocol: TCP
+
+---
+# Allow ingress from NGINX Ingress controller to backend APIs
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-to-backends
+  namespace: daltaners
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: backend
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - port: 3001
+        - port: 3002
+        - port: 3003
+        - port: 3004
+        - port: 3005
+        - port: 3006
+        - port: 3007
+        - port: 3008
+        - port: 3010
+        - port: 3013
+        - port: 3014
+        - port: 3017
+
+---
+# Allow backend services to communicate with each other (intra-namespace)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-backend-to-backend
+  namespace: daltaners
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: backend
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: backend
+
+---
+# Allow backend services to access infrastructure (databases, cache, messaging)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-backend-to-infra
+  namespace: daltaners
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values: ["postgres", "redis", "kafka", "zookeeper", "cassandra", "elasticsearch"]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: backend
+      ports:
+        - port: 5432
+        - port: 6379
+        - port: 9092
+        - port: 2181
+        - port: 9042
+        - port: 9200
+
+---
+# Allow Kafka to talk to Zookeeper
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-kafka-to-zookeeper
+  namespace: daltaners
+spec:
+  podSelector:
+    matchLabels:
+      app: zookeeper
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: kafka
+      ports:
+        - port: 2181

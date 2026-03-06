@@ -14,6 +14,7 @@ interface Order {
   id: string;
   order_number: string;
   status: OrderStatus;
+  order_type: 'delivery' | 'pickup';
   store_id: string;
   store_name: string;
   items: OrderItem[];
@@ -29,7 +30,20 @@ interface Order {
   delivered_at: string | null;
   cancelled_at: string | null;
   cancel_reason: string | null;
+  scheduled_at?: string | null;
+  picked_up_at?: string | null;
   status_history: OrderStatusEvent[];
+  delivery_person?: {
+    id: string;
+    name: string;
+    phone?: string;
+    vehicle_type: string;
+    photo_url?: string;
+  } | null;
+  delivery_lat?: number;
+  delivery_lng?: number;
+  store_lat?: number;
+  store_lng?: number;
 }
 
 type OrderStatus =
@@ -39,6 +53,7 @@ type OrderStatus =
   | 'ready_for_pickup'
   | 'picked_up'
   | 'on_the_way'
+  | 'in_transit'
   | 'delivered'
   | 'cancelled';
 
@@ -51,11 +66,35 @@ interface OrderStatusEvent {
 interface CreateOrderPayload {
   store_id: string;
   items: { product_id: string; variant_id?: string; quantity: number }[];
-  delivery_address_id: string;
+  delivery_address_id: string | null;
   delivery_type: 'standard' | 'express' | 'scheduled';
+  order_type?: 'delivery' | 'pickup';
   payment_method: string;
   notes?: string;
   scheduled_at?: string;
+  coupon_code?: string;
+  loyalty_points_used?: number;
+}
+
+interface ValidateCouponPayload {
+  code: string;
+  subtotal: number;
+  store_id?: string;
+  category_ids?: string[];
+}
+
+interface CouponValidationResult {
+  valid: boolean;
+  coupon_code: string;
+  discount_type: 'percentage' | 'fixed_amount' | 'free_delivery';
+  discount_value: number;
+  discount_amount: number;
+  message?: string;
+}
+
+interface CouponValidationResponse {
+  success: boolean;
+  data: CouponValidationResult;
 }
 
 interface OrdersResponse {
@@ -125,4 +164,16 @@ export function useCancelOrder() {
   });
 }
 
-export type { Order, OrderItem, OrderStatus, OrderStatusEvent, CreateOrderPayload };
+export function useValidateCoupon() {
+  return useMutation({
+    mutationFn: async (payload: ValidateCouponPayload) => {
+      const { data } = await api.post<CouponValidationResponse>(
+        '/orders/coupons/validate',
+        payload,
+      );
+      return data.data;
+    },
+  });
+}
+
+export type { Order, OrderItem, OrderStatus, OrderStatusEvent, CreateOrderPayload, CouponValidationResult };

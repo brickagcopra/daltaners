@@ -40,13 +40,14 @@ interface CreateZonePayload {
   estimatedDeliveryMinutes: number;
 }
 
-export function useZones(page = 1, limit = 20) {
+export function useZones(page = 1, limit = 20, city?: string) {
   return useQuery({
-    queryKey: ['admin', 'zones', { page, limit }],
+    queryKey: ['admin', 'zones', { page, limit, city }],
     queryFn: async () => {
       const params = new URLSearchParams();
       params.set('page', String(page));
       params.set('limit', String(limit));
+      if (city && city !== 'all') params.set('city', city);
 
       const response = await api.get<ZonesResponse>(`/admin/zones?${params.toString()}`);
       return response.data;

@@ -13,6 +13,7 @@ import { CategoryEntity } from '../entities/category.entity';
 import { ProductEntity } from '../entities/product.entity';
 import { ProductImageEntity } from '../entities/product-image.entity';
 import { ProductVariantEntity } from '../entities/product-variant.entity';
+import { ElasticsearchService } from '../elasticsearch.service';
 import { CATALOG_EVENTS, KAFKA_TOPIC } from '../events/catalog.events';
 
 describe('CatalogService', () => {
@@ -20,6 +21,7 @@ describe('CatalogService', () => {
   let repository: jest.Mocked<CatalogRepository>;
   let redisService: jest.Mocked<RedisService>;
   let kafkaProducer: jest.Mocked<KafkaProducerService>;
+  let elasticsearchService: jest.Mocked<ElasticsearchService>;
 
   const mockCategory: Partial<CategoryEntity> = {
     id: 'cat-uuid-1',
@@ -122,6 +124,14 @@ describe('CatalogService', () => {
             publish: jest.fn(),
           },
         },
+        {
+          provide: ElasticsearchService,
+          useValue: {
+            indexProduct: jest.fn().mockResolvedValue(undefined),
+            removeProduct: jest.fn().mockResolvedValue(undefined),
+            isAvailable: jest.fn().mockReturnValue(true),
+          },
+        },
       ],
     }).compile();
 
@@ -129,6 +139,7 @@ describe('CatalogService', () => {
     repository = module.get(CatalogRepository) as jest.Mocked<CatalogRepository>;
     redisService = module.get(RedisService) as jest.Mocked<RedisService>;
     kafkaProducer = module.get(KafkaProducerService) as jest.Mocked<KafkaProducerService>;
+    elasticsearchService = module.get(ElasticsearchService) as jest.Mocked<ElasticsearchService>;
   });
 
   // ============================================================
@@ -503,14 +514,17 @@ describe('CatalogService', () => {
     const userId = 'user-uuid-1';
 
     it('should delete product as admin', async () => {
+      repository.findProductById.mockResolvedValue(mockProduct as ProductEntity);
       repository.deleteProduct.mockResolvedValue(true);
 
       await service.deleteProduct('prod-uuid-1', userId, 'admin', null);
 
+      expect(repository.findProductById).toHaveBeenCalledWith('prod-uuid-1');
       expect(repository.deleteProduct).toHaveBeenCalledWith('prod-uuid-1');
     });
 
     it('should validate vendor ownership for non-admin', async () => {
+      repository.findProductById.mockResolvedValue(mockProduct as ProductEntity);
       repository.getProductStoreId.mockResolvedValue('store-uuid-1');
       repository.deleteProduct.mockResolvedValue(true);
 
@@ -520,17 +534,32 @@ describe('CatalogService', () => {
     });
 
     it('should throw ForbiddenException when vendor has no vendor ID', async () => {
+      repository.findProductById.mockResolvedValue(mockProduct as ProductEntity);
+
       await expect(
         service.deleteProduct('prod-uuid-1', userId, 'vendor_owner', null),
       ).rejects.toThrow(ForbiddenException);
     });
 
     it('should throw NotFoundException when product not found', async () => {
-      repository.deleteProduct.mockResolvedValue(false);
+      repository.findProductById.mockResolvedValue(null);
 
       await expect(
         service.deleteProduct('invalid-uuid', userId, 'admin', null),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should remove product from ES index and publish delete event', async () => {
+      repository.findProductById.mockResolvedValue(mockProduct as ProductEntity);
+      repository.deleteProduct.mockResolvedValue(true);
+
+      await service.deleteProduct('prod-uuid-1', userId, 'admin', null);
+
+      expect(kafkaProducer.publish).toHaveBeenCalledWith(
+        KAFKA_TOPIC,
+        CATALOG_EVENTS.PRODUCT_DELETED,
+        expect.objectContaining({ product_id: 'prod-uuid-1' }),
+      );
     });
   });
 
